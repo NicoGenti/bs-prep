@@ -1,6 +1,7 @@
 name = "bs-prep-oauth"
 main = "src/index.js"
 compatibility_date = "2026-11-03"
+workers_dev = true
 
 # Origin del browser (senza path): l'header Origin non include /bs-prep/.
 # Il callback OAuth resta https://nicogenti.github.io/bs-prep/ ; il worker lo accetta

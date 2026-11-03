@@ -31,6 +31,14 @@ jobs:
             echo "skip=false" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Installa Wrangler
+        if: steps.check.outputs.skip != 'true'
+        working-directory: worker
+        env:
+          CI: "true"
+          NPM_CONFIG_YES: "true"
+        run: npm install --no-fund --no-audit --no-save wrangler@4.157.0
+
       - name: Pubblica il worker
         if: steps.check.outputs.skip != 'true'
         uses: cloudflare/wrangler-action@v3
@@ -38,4 +46,6 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           workingDirectory: worker
+          wranglerVersion: "4.157.0"
+          packageManager: npm
           command: deploy

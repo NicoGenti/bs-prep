@@ -1,0 +1,5 @@
+{
+  "name": "bs-prep-oauth",
+  "private": true,
+  "description": "Token exchange for BS Prep. Wrangler is installed by CI, not committed."
+}
