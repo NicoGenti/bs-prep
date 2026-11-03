@@ -13,31 +13,33 @@ B.ROUTES.home=function(app){const S=B.S;const r=B.readiness();const due=B.dueCar
   app.innerHTML=`<h1>Preparazione Bending Spoons</h1>
   <p class="muted">Allenamento per il ruolo di Software Engineer. Gli esercizi sono <b>pratica nello stile descritto</b> pubblicamente dall'azienda, non le domande reali dei test.</p>
   <p class="small muted">Ultimo aggiornamento contenuti: ${esc(window.CONTENT_UPDATED?B.fmtDate(window.CONTENT_UPDATED):'—')}</p>
-  <div class="card"><div class="spread"><h2 style="margin:0">Prontezza alla candidatura</h2><span class="big"><b>${pct(r)}%</b> · ${label}</span></div>
+  <div class="dash">
+  <div class="card dash-ready"><div class="spread"><h2 style="margin:0">Prontezza alla candidatura</h2><span class="big"><b>${pct(r)}%</b> · ${label}</span></div>
    <div class="meter" style="margin:.6rem 0"><i style="width:${pct(r)}%"></i></div>
    <div class="callout small">⏳ <b>Promemoria:</b> se non superi il processo, puoi ricandidarti solo dopo <b>12 mesi</b>. Conviene candidarsi quando questo indicatore è alto e i punti deboli sono coperti.</div></div>
-  <div class="grid">
-   <div class="card"><h3 style="margin-top:0">🧠 Ripasso di oggi</h3><p class="big"><b>${due}</b> carte da ripassare</p>${due?'<a class="btn" href="#/review">Inizia il ripasso</a>':'<p class="muted small">Niente in scadenza. Completa una lezione o un quiz per aggiungere carte.</p>'}</div>
-   <div class="card"><h3 style="margin-top:0">🔥 Serie</h3><p class="big"><b>${B.streakNow()}</b> ${B.streakNow()===1?"giorno":"giorni"} · record ${S.streak.best||0}</p>
+  <div class="grid dash-kpis">
+   <div class="card dash-review"><h3 style="margin-top:0">🧠 Ripasso di oggi</h3><p class="big"><b>${due}</b> carte da ripassare</p>${due?'<a class="btn" href="#/review">Inizia il ripasso</a>':'<p class="muted small">Niente in scadenza. Completa una lezione o un quiz per aggiungere carte.</p>'}</div>
+   <div class="card dash-streak"><h3 style="margin-top:0">🔥 Serie</h3><p class="big"><b>${B.streakNow()}</b> ${B.streakNow()===1?"giorno":"giorni"} · record ${S.streak.best||0}</p>
     <div class="row" style="gap:3px" aria-label="Attività ultimi 14 giorni">${days.map(([d,n])=>`<span title="${B.fmtDate(d)}: ${n} attività" style="width:16px;height:16px;border-radius:4px;background:${n?'var(--accent)':'var(--soft)'};opacity:${n?Math.min(1,.35+n/15):1}"></span>`).join('')}</div><p class="small muted">Ultimi 14 giorni</p></div>
-   <div class="card"><h3 style="margin-top:0">▶️ Prossima lezione</h3>${next?`<p><b>${esc(next.title)}</b><br><span class="small muted">${esc(window.TOPICS[next.topic].label)} · ${next.mins} min</span></p><a class="btn" href="#/lesson/${next.id}">Studia ora</a>`:'<p>Hai completato tutte le lezioni. 🎉 Ora ripassa e fai simulazioni.</p>'}</div>
+   <div class="card dash-next"><h3 style="margin-top:0">▶️ Prossima lezione</h3>${next?`<p><b>${esc(next.title)}</b><br><span class="small muted">${esc(window.TOPICS[next.topic].label)} · ${next.mins} min</span></p><a class="btn" href="#/lesson/${next.id}">Studia ora</a>`:'<p>Hai completato tutte le lezioni. 🎉 Ora ripassa e fai simulazioni.</p>'}</div>
   </div>
-  <h2>Le fasi del processo</h2>
-  <div class="timeline">${STEPS.map((s,i)=>`<a href="${s[2]}"><span class="small muted">Fase ${i+1}</span><b>${s[0]}</b><span class="small muted">${s[1]}</span>${s[3]?`<div style="margin-top:.4rem">${bar(B.secProg(s[3]))}</div>`:''}</a>`).join('')}</div>
-  <h2>Progresso per sezione</h2>
-  <div class="grid">${Object.keys(window.SECTIONS).map(k=>{const p=B.secProg(k);return `<a class="card" style="text-decoration:none;color:inherit" href="#/${k}"><div class="spread"><b>${window.SECTIONS[k].icon} ${window.SECTIONS[k].label}</b><span>${pct(p)}%</span></div>${bar(p)}<ul class="small muted" style="padding-left:1rem;margin:.5rem 0 0">${B.sectionParts(k).map(x=>`<li>${x[0]}: ${pct(x[1])}%</li>`).join('')}</ul></a>`}).join('')}</div>
+  <details class="m-fold"><summary>Le fasi del processo</summary>
+  <div class="timeline">${STEPS.map((s,i)=>`<a href="${s[2]}"><span class="small muted">Fase ${i+1}</span><b>${s[0]}</b><span class="small muted">${s[1]}</span>${s[3]?`<div style="margin-top:.4rem">${bar(B.secProg(s[3]))}</div>`:''}</a>`).join('')}</div></details>
+  <details class="m-fold"><summary>Progresso per sezione</summary>
+  <div class="grid">${Object.keys(window.SECTIONS).map(k=>{const p=B.secProg(k);return `<a class="card" style="text-decoration:none;color:inherit" href="#/${k}"><div class="spread"><b>${window.SECTIONS[k].icon} ${window.SECTIONS[k].label}</b><span>${pct(p)}%</span></div>${bar(p)}<ul class="small muted" style="padding-left:1rem;margin:.5rem 0 0">${B.sectionParts(k).map(x=>`<li>${x[0]}: ${pct(x[1])}%</li>`).join('')}</ul></a>`}).join('')}</div></details>
   ${weak.length?`<h2>⚠️ Argomenti deboli da ripassare</h2><div class="card">${weak.slice(0,6).map(w=>`<div class="spread" style="padding:.3rem 0"><span><b>${esc(window.TOPICS[w.t].label)}</b> <span class="small muted">accuratezza ${pct(w.acc)}% su ${w.n} risposte</span></span><span><a class="btn sm" href="#/lesson/${B.firstLesson(w.t)}">Rileggi la lezione</a><a class="btn sm ghost" href="${PRACTICE[w.t]}">Esercitati</a></span></div>`).join('')}</div>`:''}
-  <h2>Padronanza per argomento</h2>
+  <details class="m-fold"><summary>Padronanza per argomento</summary>
   <div class="card">${Object.keys(window.SECTIONS).map(sec=>`<h3>${window.SECTIONS[sec].icon} ${window.SECTIONS[sec].label}</h3>${Object.keys(window.TOPICS).filter(t=>window.TOPICS[t].section===sec).map(t=>{const m=B.mastery(t);return `<div style="margin:.35rem 0"><div class="spread small"><a href="#/lesson/${B.firstLesson(t)}">${esc(window.TOPICS[t].label)}</a><span class="muted">${B.mLabel(m.level)} · ${pct(m.level)}%${m.n?` (${m.n})`:''}</span></div>${bar(m.level,m.n>=3&&m.acc<.65)}</div>`}).join('')}`).join('')}
-  <p class="small muted">La padronanza combina l'accuratezza recente (verifiche delle lezioni, quiz, test, flashcard, autovalutazioni) con la quantità di pratica: servono circa 10 risposte per arrivare al massimo.</p></div>
-  <h2>Informazioni utili</h2>
+  <p class="small muted">La padronanza combina l'accuratezza recente (verifiche delle lezioni, quiz, test, flashcard, autovalutazioni) con la quantità di pratica: servono circa 10 risposte per arrivare al massimo.</p></div></details>
+  <details class="m-fold"><summary>Informazioni utili</summary>
   <div class="card small"><ul>
    <li>Valutano soprattutto il <b>potenziale di lungo periodo</b> e la <b>velocità di apprendimento</b>, più dell'esperienza attuale.</li>
    <li>Requisiti: capacità di ragionamento, drive, spirito di squadra, inglese.</li>
    <li>Nell'annuncio: <i>"Amplify your impact with AI"</i>, <i>"Simplify relentlessly"</i>, stack diversi.</li>
    <li>Retribuzione indicativa (Europa, fuori Londra): <b>66.065–107.837 €</b> tipica, fino a <b>240.330 €</b> per profili eccezionali.</li>
    <li>Se gonfi i risultati nel CV o nei colloqui, non ricevi un'offerta: il controllo referenze serve a verificarli.</li></ul>
-   <p>Fonti ufficiali: <a href="https://bndspn.com/process-document" target="_blank" rel="noopener">documento sul processo</a> · <a href="https://jobs.bendingspoons.com/positions/69c3ec6cf2164aed6ede175b" target="_blank" rel="noopener">annuncio</a> · <a href="https://bendingspoons.com/documents/Culture&amp;Policies%E2%80%94RadicalCandor.pdf" target="_blank" rel="noopener">Radical Candor</a> · <a href="https://bendingspoons.com/careers" target="_blank" rel="noopener">careers</a> (servono una connessione internet)</p></div>`};
+   <p>Fonti ufficiali: <a href="https://bndspn.com/process-document" target="_blank" rel="noopener">documento sul processo</a> · <a href="https://jobs.bendingspoons.com/positions/69c3ec6cf2164aed6ede175b" target="_blank" rel="noopener">annuncio</a> · <a href="https://bendingspoons.com/documents/Culture&amp;Policies%E2%80%94RadicalCandor.pdf" target="_blank" rel="noopener">Radical Candor</a> · <a href="https://bendingspoons.com/careers" target="_blank" rel="noopener">careers</a> (servono una connessione internet)</p></div></details>
+  </div>`};
 
 /* ---- Ripasso / flashcard ---- */
 B.ROUTES.review=function(app,args){const S=B.S;const topic=args[0];let queue;

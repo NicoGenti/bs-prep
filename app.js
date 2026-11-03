@@ -100,10 +100,16 @@ function countdown(el,secs,onEnd,onTick){let left=secs;const fmt=s=>Math.floor(s
 /* ---------------- ROUTER ---------------- */
 const ROUTES={};
 function go(h){location.hash=h}
+function closeNav(){const nav=$('#sidenav');if(nav)nav.classList.remove('open');const bd=$('#navBackdrop');if(bd)bd.hidden=true;document.body.classList.remove('nav-open');const btn=$('#menuBtn');if(btn)btn.setAttribute('aria-expanded','false')}
+function openNav(){$('#sidenav').classList.add('open');const bd=$('#navBackdrop');if(bd)bd.hidden=false;document.body.classList.add('nav-open');$('#menuBtn').setAttribute('aria-expanded','true')}
+const TAB_FOR={home:'home',review:'review',en:'en',settings:'settings',lesson:'course',cv:'course',ps:'course',tech:'course',behav:'course',refs:'course',course:'course'};
+function foldForViewport(){if(!window.matchMedia('(min-width: 768px)').matches)return;$$('details.m-fold').forEach(d=>{d.open=true})}
 function route(){clearTimers();const parts=(location.hash.replace(/^#\/?/,'')||'home').split('/');const r=parts[0];
   $$('#sidenav a').forEach(a=>a.classList.toggle('active',a.dataset.nav===r||(r==='lesson'&&a.dataset.nav==='course')));
-  $('#sidenav').classList.remove('open');
-  const fn=ROUTES[r]||ROUTES.home;const app=$('#app');app.innerHTML='';fn(app,parts.slice(1));window.scrollTo(0,0);updateBadges()}
+  const tab=TAB_FOR[r]||'';
+  $$('.tabbar a').forEach(a=>a.classList.toggle('active',a.dataset.tab===tab));
+  closeNav();
+  const fn=ROUTES[r]||ROUTES.home;const app=$('#app');app.innerHTML='';fn(app,parts.slice(1));foldForViewport();window.scrollTo(0,0);updateBadges()}
 window.addEventListener('hashchange',route);
 function tabs(base,list,cur){return `<div class="tabs">${list.map(([k,l])=>`<a href="#/${base}/${k}" class="${k===cur?'active':''}">${l}</a>`).join('')}</div>`}
 function lessonList(sec){const ls=LESSONS.filter(l=>TOPICS[l.topic].section===sec);return `<div class="grid">${ls.map(l=>{const d=S.lessons[l.id];const m=mastery(l.topic);return `<a class="card" style="text-decoration:none;color:inherit" href="#/lesson/${l.id}"><div class="spread"><span class="tag">${esc(TOPICS[l.topic].label)}</span>${d&&d.done?`<span class="tag ok">✓ ${pct(d.score)}%</span>`:'<span class="tag">da fare</span>'}</div><h3>${esc(l.title)}</h3><div class="muted small">⏱ ${l.mins} min · padronanza argomento ${pct(m.level)}%</div></a>`}).join('')}</div>`}
@@ -114,7 +120,12 @@ document.addEventListener('change',e=>{const el=e.target;if(el.dataset.check){S.
 function checklist(name){return `<div class="card" data-prog="${name}"><div class="cprog">${bar(checkFrac(name))}<div class="small muted">${pct(checkFrac(name))}% completato</div></div>${CHECKLISTS[name].map((t,i)=>`<label class="check"><input type="checkbox" data-check="${name}:${i}" ${S.checks[name+':'+i]?'checked':''}><span>${esc(t)}</span></label>`).join('')}</div>`}
 const tval=k=>esc(S.texts[k]||'');
 
-$('#menuBtn').addEventListener('click',()=>$('#sidenav').classList.toggle('open'));
+$('#menuBtn').addEventListener('click',()=>{$('#sidenav').classList.contains('open')?closeNav():openNav()});
+const navBd=$('#navBackdrop');if(navBd)navBd.addEventListener('click',closeNav);
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeNav()});
+$('#sidenav').addEventListener('click',e=>{if(e.target.closest('a'))closeNav()});
+const wideMQ=window.matchMedia('(min-width: 768px)');
+if(wideMQ.addEventListener)wideMQ.addEventListener('change',foldForViewport);
 $('#themeBtn').addEventListener('click',()=>{const t=document.documentElement.dataset.theme==='dark'?'light':'dark';document.documentElement.dataset.theme=t;S.theme=t;save()});
 window.BS={get S(){return S},streakNow,route,touch,save,saveNow,record,mastery,srsGrade,srsAdd,dueCards,readiness,secProg,CARDS,ROUTES,esc,$,$$,shuffle,pct,bar,tabs,lessonList,checklist,tval,toast,countdown,clearTimers,renderMCQ,quizItem,checkItem,today,fmtDate,avg,weakTopics,firstLesson,lessonsOf,mLabel,sectionParts,COVER_FIELDS,CORE_TRAITS,go,replaceState:(ns)=>{S=Object.assign(defaults(),ns);saveNow()},resetState:()=>{S=defaults();saveNow()}};
 })();

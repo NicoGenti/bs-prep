@@ -11,7 +11,7 @@
 </head>
 <body>
 <header class="topbar">
-  <button class="iconbtn" id="menuBtn" aria-label="Menu">☰</button>
+  <button class="iconbtn" id="menuBtn" type="button" aria-label="Menu" aria-expanded="false" aria-controls="sidenav">☰</button>
   <a href="#/home" class="brand">🥄 <b>BS Prep</b><span class="muted small"> · Software Engineer</span></a>
   <div class="topright">
     <span id="streakBadge" class="badge" title="Giorni consecutivi di allenamento">🔥 0</span>
@@ -21,6 +21,7 @@
     <button class="iconbtn" id="themeBtn" aria-label="Tema chiaro/scuro">🌓</button>
   </div>
 </header>
+<div id="navBackdrop" hidden></div>
 <div class="layout">
   <nav id="sidenav" class="sidenav">
     <a href="#/home" data-nav="home">🏠 Dashboard</a>
@@ -41,6 +42,13 @@
   <main id="app" tabindex="-1"></main>
 </div>
 <div id="toast" class="toast" role="status"></div>
+<nav class="tabbar" aria-label="Navigazione rapida">
+  <a href="#/home" data-tab="home"><span aria-hidden="true">🏠</span><span>Home</span></a>
+  <a href="#/review" data-tab="review"><span aria-hidden="true">🧠</span><span>Ripasso</span></a>
+  <a href="#/course" data-tab="course"><span aria-hidden="true">📚</span><span>Studia</span></a>
+  <a href="#/en" data-tab="en"><span aria-hidden="true">🇬🇧</span><span>Inglese</span></a>
+  <a href="#/settings" data-tab="settings"><span aria-hidden="true">📊</span><span>Progressi</span></a>
+</nav>
 <script src="sync-config.js"></script>
 <script src="sync-merge.js"></script>
 <script src="html-sanitize.js"></script>
