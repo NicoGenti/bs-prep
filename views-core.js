@@ -90,6 +90,7 @@ B.ROUTES.lesson=function(app,args){const S=B.S;const L=window.LESSONS,idx=L.find
 /* ---- Impostazioni ---- */
 B.ROUTES.settings=function(app){const S=B.S;const size=new Blob([JSON.stringify(S)]).size;
   app.innerHTML=`<h1>⚙️ Impostazioni e dati</h1>
+  <div class="card" id="syncCard" hidden><h3 style="margin-top:0">Sincronizzazione GitHub</h3><div id="syncBody"></div></div>
   <div class="card"><h3 style="margin-top:0">Tema</h3><div class="row"><button class="btn ghost" data-theme-set="light">☀️ Chiaro</button><button class="btn ghost" data-theme-set="dark">🌙 Scuro</button></div></div>
   <div class="card"><h3 style="margin-top:0">Esporta / importa i progressi</h3><p class="small muted">I dati restano solo in questo browser (localStorage, ${(size/1024).toFixed(1)} KB). Esporta un file JSON per fare un backup o spostarti su un altro dispositivo.</p>
    <div class="row"><button class="btn" id="exp">⬇️ Esporta JSON</button><label class="btn ghost" style="margin:0;font-weight:400">⬆️ Importa JSON<input type="file" id="imp" accept="application/json,.json" hidden></label></div></div>
@@ -99,5 +100,6 @@ B.ROUTES.settings=function(app){const S=B.S;const size=new Blob([JSON.stringify(
   $('#exp').addEventListener('click',()=>{B.saveNow();const blob=new Blob([JSON.stringify({app:'bs-prep',exported:new Date().toISOString(),data:B.S},null,1)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='bs-prep-progressi-'+B.today()+'.json';document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},500);B.toast('File esportato')});
   $('#imp').addEventListener('change',e=>{const f=e.target.files[0];if(!f)return;const rd=new FileReader();rd.onload=()=>{try{const j=JSON.parse(rd.result);const d=j&&j.data?j.data:j;if(!d||typeof d!=='object'||d.v!==1||!d.srs)throw new Error('formato');if(!confirm('Sostituire i progressi attuali con quelli del file?'))return;B.replaceState(d);if(d.theme)document.documentElement.dataset.theme=d.theme;B.toast('Progressi importati');B.go('#/home');B.route()}catch(err){alert('File non valido: non sembra un export di BS Prep.')}};rd.readAsText(f)});
   $('#addall').addEventListener('click',()=>{let n=0;Object.keys(B.CARDS).forEach(id=>{if(B.srsAdd(id))n++});B.save();B.route();B.toast(n+' carte aggiunte')});
-  $('#reset').addEventListener('click',()=>{if(confirm('Vuoi davvero cancellare tutti i progressi?')&&confirm('Ultima conferma: cancello tutto?')){const th=B.S.theme;B.resetState();B.S.theme=th;B.saveNow();B.toast('Progressi azzerati');B.go('#/home');B.route()}})};
+  $('#reset').addEventListener('click',()=>{if(confirm('Vuoi davvero cancellare tutti i progressi?')&&confirm('Ultima conferma: cancello tutto?')){const th=B.S.theme;B.resetState();B.S.theme=th;B.saveNow();B.toast('Progressi azzerati');B.go('#/home');B.route()}});
+  if(window.BSSync)window.BSSync.mountSettings()};
 })();

@@ -16,8 +16,8 @@ function defaults(){return {v:1,theme:null,checks:{},texts:{},lessons:{},mastery
 function load(){try{const raw=localStorage.getItem(KEY);if(!raw)return defaults();return Object.assign(defaults(),JSON.parse(raw))}catch(e){return defaults()}}
 let S=load();
 let saveT=null;
-function save(){clearTimeout(saveT);saveT=setTimeout(()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){toast('⚠️ Impossibile salvare (spazio esaurito o modalità privata)')}},150)}
-function saveNow(){clearTimeout(saveT);try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+function save(){clearTimeout(saveT);saveT=setTimeout(()=>{if(saveNow()===false)toast('⚠️ Impossibile salvare (spazio esaurito o modalità privata)')},150)}
+function saveNow(){clearTimeout(saveT);try{if(typeof window.BSPrepareSave==='function')window.BSPrepareSave(S)}catch(e){}try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){return false}try{if(typeof window.BS_onProgress==='function')window.BS_onProgress()}catch(e){}return true}
 window.addEventListener('beforeunload',saveNow);
 function toast(msg){const t=$('#toast');t.textContent=msg;t.classList.add('show');clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('show'),2200)}
 

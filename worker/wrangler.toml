@@ -1,0 +1,9 @@
+name = "bs-prep-oauth"
+main = "src/index.js"
+compatibility_date = "2026-11-03"
+
+# URL del sito Pages, per esempio https://<utente>.github.io/bs-prep/
+# Il worker accetta il CORS solo sull'origin di questo URL e scambia il code
+# solo se redirect_uri coincide (lo slash finale è indifferente).
+[vars]
+ALLOWED_ORIGIN = ""

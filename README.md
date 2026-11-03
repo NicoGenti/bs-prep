@@ -24,11 +24,15 @@ Apri [http://127.0.0.1:8000](http://127.0.0.1:8000). Funziona anche aprendo `ind
 
 Dalla home si vedono la prontezza, il ripasso del giorno e le sezioni, compresa Inglese tecnico. «Ultimo aggiornamento contenuti» è la data dell’ultimo giro dello script mensile (all’inizio, la data del materiale iniziale).
 
-Per rifare i test dello script di aggiornamento:
+Per rifare i test locali:
 
 ```bash
 node scripts/test-update.mjs
+node scripts/test-sync-merge.mjs
+node scripts/test-worker.mjs
 ```
+
+Senza `clientId` e `workerUrl` in `sync-config.js` il pulsante «Accedi» non c’è: il sito resta solo offline, come prima.
 
 ## GitHub Pages
 
@@ -66,3 +70,35 @@ Lo script [`scripts/update-content.mjs`](scripts/update-content.mjs) (Node, senz
 Un commit fatto con `GITHUB_TOKEN` non rilancia gli altri workflow. Per questo, se il commit c’è, lo stesso workflow chiama il deploy di Pages (`workflow_call`).
 
 Gli id già in uso non si toccano: si aggiungono id nuovi (il modello è istruito a prefissarli con `auto-` e la data) oppure si corregge solo il testo, carte e domande restano allo stesso indice.
+
+## Accesso GitHub (opzionale)
+
+Chiunque abbia un account GitHub può salvare i progressi in un **Gist segreto del proprio account**. Senza accesso il sito funziona tutto in locale, esattamente come prima: lezioni, quiz, ripasso SM-2 ed export/import JSON non dipendono dal login.
+
+Il sito è statico, quindi non può custodire il client secret. Lo scambio `code` → token lo fa un Cloudflare Worker in [`worker/`](worker/). Chiede solo lo scope `gist`, controlla `state` (firmato, a scadenza, senza memorizzarlo) e l’origine CORS. Non scrive log e non tiene il token: lo rimanda al browser, che da lì parla solo con `api.github.com`.
+
+Il token resta in `localStorage` (`bsprep.oauth`), separato dai progressi. In impostazioni è spiegato: serve solo a leggere e scrivere i Gist, ed «Esci» lo cancella. All’accesso il sito cerca o crea `bs-prep-progress.json`, scarica i dati, li unisce a quelli locali (per ogni voce vince il timestamp più recente; una carta SM-2 presente su un solo lato non si perde) e poi riscrive il Gist. I salvataggi partono qualche secondo dopo una modifica, quando la scheda va in secondo piano, e da «Sincronizza ora». Se la rete manca, i progressi restano sul dispositivo e il tentativo si ripete.
+
+Un Gist segreto **non è privato**: non è in elenco sul profilo, ma chi ha il link può leggerlo.
+
+### Configurazione
+
+1. **OAuth App** su GitHub: Settings → Developer settings → OAuth Apps → New OAuth App.
+   - Homepage URL: l’URL di GitHub Pages, con lo slash finale. Esempio: `https://<utente>.github.io/bs-prep/`
+   - Authorization callback URL: **lo stesso URL**.
+   - Registra l’app e genera un client secret. Il client id è pubblico; il secret no.
+2. **Cloudflare** (piano gratuito): crea un account e un API token con il permesso di modificare i Workers (template «Edit Cloudflare Workers»). Copia anche l’Account ID.
+3. **Secret del repository** (Settings → Secrets and variables → Actions), usati solo dal workflow di deploy:
+   - `CLOUDFLARE_API_TOKEN`
+   - `CLOUDFLARE_ACCOUNT_ID`
+   Se mancano, [`.github/workflows/deploy-worker.yml`](.github/workflows/deploy-worker.yml) scrive un messaggio ed esce senza errore. Parte da solo quando cambia `worker/**`, oppure a mano da Actions → **Deploy Cloudflare Worker**.
+4. In [`worker/wrangler.toml`](worker/wrangler.toml) imposta `ALLOWED_ORIGIN` con lo stesso URL della callback (lo slash finale è indifferente). È l’origine del sito: il worker rifiuta le altre. Poi fai il deploy (workflow, oppure in locale `npx wrangler deploy` dentro `worker/`).
+5. **Segreti del worker**, mai nel frontend e mai nel toml:
+   ```bash
+   cd worker
+   npx wrangler secret put GITHUB_CLIENT_ID
+   npx wrangler secret put GITHUB_CLIENT_SECRET
+   ```
+6. In [`sync-config.js`](sync-config.js) scrivi il client id e l’URL del worker (`https://bs-prep-oauth.<account>.workers.dev`, senza path). Fai commit: Pages ripubblica il sito e compare «Accedi».
+
+La Content-Security-Policy consente script solo dal sito, e le connessioni verso `api.github.com` e `https://*.workers.dev`. Un dominio custom del worker va aggiunto a `connect-src` in `index.html`.
