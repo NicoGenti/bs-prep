@@ -1,16 +1,17 @@
-/* Scambia il code OAuth di GitHub con un access token. Non salva e non registra nulla.
-   Variabili: ALLOWED_ORIGIN (solo origin, senza path), GITHUB_CLIENT_ID.
-   Segreto: GITHUB_CLIENT_SECRET. */
+/* Exchanges a GitHub OAuth code for an access token. It stores and logs nothing.
+   Variables: ALLOWED_ORIGIN (origins only, without paths), GITHUB_CLIENT_ID.
+   Secret: GITHUB_CLIENT_SECRET. */
 
 const TOKEN_URL = 'https://github.com/login/oauth/access_token';
 const STATE_TTL_MS = 10 * 60 * 1000;
+const MAX_BODY_BYTES = 10240;
 
 function bytesToHex(buf) {
   return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('');
 }
 function hexToBytes(hex) {
   const out = new Uint8Array(hex.length / 2);
-  for (let i = 0; i < out.length; i++) out[i] = parseInt(hex.slice(i * 2, i * 2 + 2), 16);
+  for (let i = 0; i < out.length; i++) out[i] = parseInt(hex.slice(i * 2, 2), 16);
   return out;
 }
 async function hmac(secret, data) {
@@ -21,22 +22,27 @@ async function hmac(secret, data) {
     false,
     ['sign']
   );
-  const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(data));
-  return bytesToHex(sig);
+  const signature = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(data));
+  return bytesToHex(signature);
 }
-function safeEqual(a, b) {
-  if (typeof a !== 'string' || typeof b !== 'string' || a.length !== b.length) return false;
+async function sha256Hex(value) {
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(value));
+  return bytesToHex(digest);
+}
+async function digestEqual(a, b) {
+  if (typeof a !== 'string' || typeof b !== 'string') return false;
+  const [left, right] = await Promise.all([sha256Hex(a), sha256Hex(b)]);
   let diff = 0;
-  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  for (let i = 0; i < left.length; i++) diff |= left.charCodeAt(i) ^ right.charCodeAt(i);
   return diff === 0;
 }
-export function allowedOrigins(env) {
+function allowedOrigins(env) {
   return String(env.ALLOWED_ORIGIN || '')
     .split(',')
-    .map(s => s.trim())
+    .map(value => value.trim())
     .filter(Boolean);
 }
-export function canonicalRedirect(value) {
+function canonicalRedirect(value) {
   let url;
   try { url = new URL(value); } catch { return null; }
   if (url.protocol !== 'https:' || url.username || url.password || url.search || url.hash) return null;
@@ -62,43 +68,42 @@ function corsHeaders(origin, allowed) {
   };
 }
 function reply(body, status, headers) {
-  const h = Object.assign({ 'Content-Type': 'application/json; charset=utf-8' }, headers || {});
-  return new Response(JSON.stringify(body), { status, headers: h });
+  const responseHeaders = Object.assign({ 'Content-Type': 'application/json; charset=utf-8' }, headers || {});
+  return new Response(JSON.stringify(body), { status, headers: responseHeaders });
 }
 export async function issueState(secret, now) {
   const nonceBytes = new Uint8Array(16);
   crypto.getRandomValues(nonceBytes);
   const nonce = bytesToHex(nonceBytes);
-  const exp = String((now || Date.now()) + STATE_TTL_MS);
-  const payload = nonce + '.' + exp;
-  const sig = await hmac(secret, payload);
-  return payload + '.' + sig;
+  const expiresAt = String((now || Date.now()) + STATE_TTL_MS);
+  const payload = nonce + '.' + expiresAt;
+  const signature = await hmac(secret, payload);
+  return payload + '.' + signature;
 }
 export async function verifyState(secret, state, now) {
   if (typeof state !== 'string' || state.length > 200) return false;
   const parts = state.split('.');
   if (parts.length !== 3) return false;
-  const [nonce, exp, sig] = parts;
-  if (!/^[0-9a-f]{32}$/.test(nonce) || !/^\d{10,16}$/.test(exp) || !/^[0-9a-f]{64}$/.test(sig)) return false;
-  if (Number(exp) < (now || Date.now())) return false;
-  const expected = await hmac(secret, nonce + '.' + exp);
-  if (expected.length !== sig.length || hexToBytes(sig).length !== 32) return false;
-  return safeEqual(expected, sig);
+  const [nonce, expiresAt, signature] = parts;
+  if (!/^[0-9a-f]{32}$/.test(nonce) || !/^\d{10,16}$/.test(expiresAt) || !/^[0-9a-f]{64}$/.test(signature)) return false;
+  if (Number(expiresAt) < (now || Date.now())) return false;
+  const expected = await hmac(secret, nonce + '.' + expiresAt);
+  return digestEqual(expected, signature);
 }
-/* Path del sito su GitHub Pages. L'header Origin è solo https://<user>.github.io. */
+/* Site path on GitHub Pages. The Origin header is only https://<user>.github.io. */
 const PAGES_PATH = '/bs-prep/';
 export function redirectAllowed(env, redirectUri) {
-  const want = canonicalRedirect(redirectUri);
-  if (!want) return false;
-  let wantUrl;
-  try { wantUrl = new URL(want); } catch { return false; }
+  const wanted = canonicalRedirect(redirectUri);
+  if (!wanted) return false;
+  let wantedUrl;
+  try { wantedUrl = new URL(wanted); } catch { return false; }
   return allowedOrigins(env).some(entry => {
     let configured;
     try { configured = new URL(entry); } catch { return false; }
-    if (configured.protocol !== 'https:' || configured.origin !== wantUrl.origin) return false;
+    if (configured.protocol !== 'https:' || configured.origin !== wantedUrl.origin) return false;
     const path = configured.pathname || '/';
-    if (path === '/') return wantUrl.pathname === PAGES_PATH || wantUrl.pathname === '/';
-    return canonicalRedirect(entry) === want;
+    if (path === '/') return wantedUrl.pathname === PAGES_PATH || wantedUrl.pathname === '/';
+    return canonicalRedirect(entry) === wanted;
   });
 }
 
@@ -118,6 +123,12 @@ export async function handle(request, env, fetchImpl) {
     return reply({ state }, 200, headers);
   }
   if (url.pathname === '/token' && request.method === 'POST') {
+    const contentType = String(request.headers.get('content-type') || '').toLowerCase();
+    if (!contentType.includes('application/json')) return reply({ error: 'unsupported_media_type' }, 415, headers);
+    const contentLength = Number(request.headers.get('content-length') || '0');
+    if (!Number.isFinite(contentLength) || contentLength <= 0 || contentLength > MAX_BODY_BYTES) {
+      return reply({ error: 'payload_too_large' }, 413, headers);
+    }
     let body;
     try { body = await request.json(); } catch { return reply({ error: 'bad_request' }, 400, headers); }
     const code = body && body.code;
@@ -131,9 +142,9 @@ export async function handle(request, env, fetchImpl) {
     form.set('client_secret', env.GITHUB_CLIENT_SECRET);
     form.set('code', code);
     form.set('redirect_uri', redirectUri);
-    let gh;
+    let githubResponse;
     try {
-      gh = await fetchFn(TOKEN_URL, {
+      githubResponse = await fetchFn(TOKEN_URL, {
         method: 'POST',
         headers: { Accept: 'application/json', 'Content-Type': 'application/x-www-form-urlencoded' },
         body: form.toString(),
@@ -143,13 +154,13 @@ export async function handle(request, env, fetchImpl) {
       return reply({ error: 'upstream' }, 502, headers);
     }
     let data;
-    try { data = await gh.json(); } catch { return reply({ error: 'upstream' }, 502, headers); }
-    if (!gh.ok || !data || data.error || typeof data.access_token !== 'string') {
+    try { data = await githubResponse.json(); } catch { return reply({ error: 'upstream' }, 502, headers); }
+    if (!githubResponse.ok || !data || data.error || typeof data.access_token !== 'string') {
       return reply({ error: 'exchange_failed' }, 502, headers);
     }
     const scope = String(data.scope || '');
-    const parts = scope.split(',').map(s => s.trim()).filter(Boolean);
-    if (parts.length !== 1 || parts[0] !== 'gist') return reply({ error: 'scope' }, 403, headers);
+    const scopeParts = scope.split(',').map(value => value.trim()).filter(Boolean);
+    if (scopeParts.length !== 1 || scopeParts[0] !== 'gist') return reply({ error: 'scope' }, 403, headers);
     return reply({ access_token: data.access_token, token_type: 'bearer', scope: 'gist' }, 200, headers);
   }
   return reply({ error: 'not_found' }, 404, headers);

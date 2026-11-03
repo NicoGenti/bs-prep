@@ -11,7 +11,7 @@
 <link rel="icon" href="icon-192.png" type="image/png" sizes="192x192">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="manifest" href="manifest.webmanifest">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://api.github.com https://*.workers.dev; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' https://api.github.com https://*.workers.dev; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'none'; upgrade-insecure-requests">
 <title>BS Prep · Allenamento selezione Bending Spoons</title>
 <link rel="stylesheet" href="styles.css">
 <link rel="stylesheet" href="mobile-glass.css">
@@ -63,7 +63,7 @@
     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5h5.6c1.5 0 2.6 1 2.8 2.4V19c-.8-.5-1.8-.8-2.9-.8H5zM19 5h-5.6C11.9 5 10.8 6 10.6 7.4V19c.8-.5 1.8-.8 2.9-.8H19z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg>
   </a>
   <a href="#/en" data-tab="en" aria-label="Inglese">
-    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5.2 6.2h13.6v9.2H9.4L5.2 18.6zM9.3 14.2l1.3-3.6h1.4l1.3 3.6M10.1 12.6h2.6" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round"/></svg>
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5.2 6.2h13.6v9.2H9.4L5.2 18.6zM9.3 14.2l1.3-3.6h1.4l1.3 3.6M10.1 12.6h2.6" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
   </a>
   <button type="button" id="moreBtn" data-tab="more" aria-label="Altro" aria-haspopup="dialog" aria-expanded="false" aria-controls="moreSheet">
     <svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="6.5" cy="12" r="1.25"/><circle cx="12" cy="12" r="1.25"/><circle cx="17.5" cy="12" r="1.25"/></g></svg>
