@@ -1,6 +1,6 @@
 /* Login GitHub opzionale. Il client id è pubblico.
-   workerUrl vuoto: il pulsante Accedi resta nascosto e il sito non chiama rete. */
+   workerUrl è l'origine del Worker, senza path. */
 window.BS_SYNC = {
   clientId: "Ov23lia3NGyf7VDiuuJN",
-  workerUrl: ""
+  workerUrl: "https://bs-prep-oauth.nicolas-gentilucci.workers.dev"
 };

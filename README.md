@@ -32,7 +32,7 @@ node scripts/test-sync-merge.mjs
 node scripts/test-worker.mjs
 ```
 
-In `sync-config.js` il client id c’è già. Finché `workerUrl` è vuoto il pulsante «Accedi» non compare e il sito non chiama rete: resta solo offline.
+In `sync-config.js` il client id e l’URL del Worker ci sono già: `https://bs-prep-oauth.nicolas-gentilucci.workers.dev`. «Accedi» compare dopo il deploy di Pages. Lo scambio del token funziona solo dopo aver impostato il secret sul Worker.
 
 ## GitHub Pages
 
@@ -93,13 +93,8 @@ Manca solo Cloudflare. In ordine:
    - `CLOUDFLARE_API_TOKEN`
    - `CLOUDFLARE_ACCOUNT_ID`
    Se mancano, [`.github/workflows/deploy-worker.yml`](.github/workflows/deploy-worker.yml) scrive un messaggio ed esce senza errore. Parte da solo quando cambia `worker/**`, oppure a mano da Actions → **Deploy Cloudflare Worker**.
-4. **Segreto del worker**, una volta pubblicato (il client id è già una variabile, non un secret):
-   ```bash
-   cd worker
-   npx wrangler secret put GITHUB_CLIENT_SECRET
-   ```
-   Il valore è il client secret dell’OAuth App. Non va nel repository.
-5. **`workerUrl` in `sync-config.js`**: l’URL stampato dal deploy, della forma `https://bs-prep-oauth.<account>.workers.dev`, senza path. Fai commit. Pages ripubblica il sito e compare «Accedi».
+4. **Segreto del worker.** Il client id è già una variabile in `wrangler.toml`. Il client secret va solo in Cloudflare: Worker `bs-prep-oauth` → Settings → Variables and Secrets → aggiungi `GITHUB_CLIENT_SECRET`. Non va nel repository e non va chiesto in chat.
+5. L’URL del Worker in `sync-config.js` è già `https://bs-prep-oauth.nicolas-gentilucci.workers.dev`. Dopo il deploy di Pages compare «Accedi».
 
 Callback dell’OAuth App, se va ricontrollata: Homepage URL e Authorization callback URL entrambi `https://nicogenti.github.io/bs-prep/`.
 
