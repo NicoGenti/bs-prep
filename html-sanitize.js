@@ -138,7 +138,10 @@
 
       var attrRaw = inner.slice(nameMatch[0].length);
       var attrs = parseAttrs(attrRaw);
-      if (name === 'div' && !classAttr(attrs)) continue;
+      if (name === 'div' && !classAttr(attrs)) {
+        dropStack.push(name);
+        continue;
+      }
 
       output += '<' + name + classAttr(attrs) + '>';
       if (!VOID[name]) stack.push(name);
