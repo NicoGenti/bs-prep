@@ -78,7 +78,27 @@ function paint(){
     }
   }
   if(document.getElementById('syncCard'))mountSettings();
+  paintSheet();
 }
+function paintSheet(){
+  const slot=document.getElementById('sheetSync');
+  if(!slot||!window.BS)return;
+  const c=cfg();
+  if(!c){slot.hidden=true;slot.innerHTML='';return}
+  slot.hidden=false;
+  const ses=session();
+  const bad=status.phase==='error'||status.phase==='offline';
+  const esc=window.BS.esc;
+  slot.innerHTML=ses
+    ?`<p class="small"><b>${esc(label())}</b>${ses.login?' · '+esc(ses.login):''}</p><div class="row">${bad?'<button type="button" class="btn" id="sheetRetry">Riprova</button>':''}<a class="btn ghost" href="#/settings">Apri sincronizzazione</a></div>`
+    :`<p class="small">${bad?esc(label()):'Copia i progressi su un Gist segreto del tuo account.'}</p><button type="button" class="btn" id="sheetLogin">Accedi con GitHub</button>`;
+  const inn=document.getElementById('sheetLogin');if(inn)inn.addEventListener('click',()=>{closeSheetSafe();login()});
+  const retry=document.getElementById('sheetRetry');if(retry)retry.addEventListener('click',()=>{
+    if(typeof navigator!=='undefined'&&navigator.onLine===false){setStatus('offline','Connettiti e riprova.');window.BS.toast('Sei offline. I progressi restano su questo dispositivo.');return}
+    pull().catch(()=>setStatus('error','Non riesco a sincronizzare. Riprova.'));
+  });
+}
+function closeSheetSafe(){const sh=document.getElementById('moreSheet');if(sh){sh.classList.remove('open');sh.hidden=true}const bd=document.getElementById('sheetBackdrop');if(bd)bd.hidden=true;document.body.classList.remove('sheet-open');const btn=document.getElementById('moreBtn');if(btn)btn.setAttribute('aria-expanded','false')}
 function label(){
   if(status.phase==='saving')return 'Sincronizzazione in corso…';
   if(status.phase==='offline')return 'Offline: i progressi restano su questo dispositivo. '+(status.detail||'');
@@ -257,10 +277,15 @@ function mountSettings(){
   body.innerHTML=`<p class="small">Il token di accesso resta <b>solo in questo browser</b> (localStorage, separato dai progressi). Permette soltanto di leggere e scrivere i Gist del tuo account. Esci per rimuoverlo.</p>
     <p class="small muted">Dopo l’accesso i progressi vanno in un Gist segreto tuo, file <code>${FILE}</code>. Un Gist segreto non compare nel profilo, ma chiunque abbia il link può leggerlo: non è un archivio privato.</p>
     <p><b>${esc(label())}</b>${ses&&ses.login?' · '+esc(ses.login):''}</p>
-    <div class="row">${ses?'<button class="btn ghost" type="button" id="syncNow">Sincronizza ora</button><button class="btn ghost" type="button" id="syncOut">Esci</button>':'<button class="btn" type="button" id="syncIn">Accedi con GitHub</button>'}</div>`;
+    <div class="row">${(status.phase==='error'||status.phase==='offline')?'<button class="btn" type="button" id="syncRetry">Riprova</button>':''}${ses?'<button class="btn ghost" type="button" id="syncNow">Sincronizza ora</button><button class="btn ghost" type="button" id="syncOut">Esci</button>':'<button class="btn" type="button" id="syncIn">Accedi con GitHub</button>'}</div>`;
   const inn=document.getElementById('syncIn'); if(inn)inn.addEventListener('click', login);
   const out=document.getElementById('syncOut'); if(out)out.addEventListener('click', logout);
-  const now=document.getElementById('syncNow'); if(now)now.addEventListener('click', ()=>{pull().catch(()=>setStatus('error'));});
+  const now=document.getElementById('syncNow'); if(now)now.addEventListener('click', ()=>{pull().catch(()=>setStatus('error','Non riesco a sincronizzare. Riprova.'))});
+  const retry=document.getElementById('syncRetry'); if(retry)retry.addEventListener('click', ()=>{
+    if(typeof navigator!=='undefined'&&navigator.onLine===false){setStatus('offline','Connettiti e riprova.');B.toast('Sei offline. I progressi restano su questo dispositivo.');return}
+    if(ses)pull().catch(()=>setStatus('error','Non riesco a sincronizzare. Riprova.'));
+    else login();
+  });
 }
 function stripQuery(){
   const u=new URL(location.href);

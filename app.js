@@ -55,7 +55,7 @@ function srsGrade(id,q){if(!S.srs[id])srsAdd(id);const c=S.srs[id];c.n++;
   else{c.reps++;c.int=c.reps===1?1:c.reps===2?(q===5?4:3):Math.round(c.int*c.ef*(q===3?0.8:1));c.ef=Math.max(1.3,c.ef+0.1-(5-q)*(0.08+(5-q)*0.02));c.due=addDays(c.int)}
   c.last=today();record(CARDS[id].topic,q>=4?1:q===3?.6:0);save()}
 function dueCards(){const t=today();return Object.keys(S.srs).filter(id=>CARDS[id]&&S.srs[id].due<=t)}
-function updateBadges(){$('#streakBadge').textContent='🔥 '+streakNow();$('#dueBadge').textContent='🧠 '+dueCards().length;const cu=$('#contentUpdated');if(cu)cu.textContent='Ultimo aggiornamento contenuti: '+(window.CONTENT_UPDATED?fmtDate(window.CONTENT_UPDATED):'—')}
+function updateBadges(){$('#streakBadge').textContent='🔥 '+streakNow();$('#dueBadge').textContent='🧠 '+dueCards().length;const label='Ultimo aggiornamento contenuti: '+(window.CONTENT_UPDATED?fmtDate(window.CONTENT_UPDATED):'—');const cu=$('#contentUpdated');if(cu)cu.textContent=label;const su=$('#sheetUpdated');if(su)su.textContent=label}
 
 /* ---------------- PROGRESSO SEZIONI ---------------- */
 const avg=a=>a.length?a.reduce((x,y)=>x+y,0)/a.length:0;
@@ -102,14 +102,32 @@ const ROUTES={};
 function go(h){location.hash=h}
 function closeNav(){const nav=$('#sidenav');if(nav)nav.classList.remove('open');const bd=$('#navBackdrop');if(bd)bd.hidden=true;document.body.classList.remove('nav-open');const btn=$('#menuBtn');if(btn)btn.setAttribute('aria-expanded','false')}
 function openNav(){$('#sidenav').classList.add('open');const bd=$('#navBackdrop');if(bd)bd.hidden=false;document.body.classList.add('nav-open');$('#menuBtn').setAttribute('aria-expanded','true')}
-const TAB_FOR={home:'home',review:'review',en:'en',settings:'settings',lesson:'course',cv:'course',ps:'course',tech:'course',behav:'course',refs:'course',course:'course'};
-function foldForViewport(){if(!window.matchMedia('(min-width: 768px)').matches)return;$$('details.m-fold').forEach(d=>{d.open=true})}
+const TAB_FOR={home:'home',review:'review',en:'en',lesson:'course',course:'course',cv:'more',ps:'more',tech:'more',behav:'more',refs:'more',settings:'more'};
+const TITLES={home:'BS Prep',review:'Ripasso',course:'Studia',lesson:'Lezione',en:'Inglese',cv:'CV e lettera',ps:'Problem solving',tech:'Test tecnici',behav:'Comportamentale',refs:'Referenze',settings:'Impostazioni'};
+const wideQ=window.matchMedia('(min-width: 768px) and (min-height: 501px)');
+const phoneQ=window.matchMedia('(max-width: 767px), (max-width: 950px) and (max-height: 500px)');
+function foldForViewport(){if(!wideQ.matches)return;$$('details.m-fold').forEach(d=>{d.open=true})}
+let parking=false;
+function clearDock(){const dock=$('#thumbDock');if(!dock)return;if(!dock.childElementCount&&dock.hidden)return;dock.replaceChildren();dock.hidden=true;document.body.classList.remove('has-thumb')}
+function parkThumbs(){if(parking)return;const dock=$('#thumbDock');if(!dock)return;parking=true;try{
+  if(!phoneQ.matches){if(dock.childElementCount||!dock.hidden){dock.replaceChildren();dock.hidden=true;document.body.classList.remove('has-thumb')}return}
+  const fresh=$$('#app .thumb').filter(el=>el.getClientRects().length);
+  if(fresh.length){dock.replaceChildren(...fresh);dock.hidden=false;document.body.classList.add('has-thumb');return}
+  const keep=[...dock.children].filter(el=>el.classList.contains('thumb')&&el.getClientRects().length);
+  if(keep.length!==dock.childElementCount)dock.replaceChildren(...keep);
+  const on=keep.length>0;if(dock.hidden===on)dock.hidden=!on;document.body.classList.toggle('has-thumb',on);
+}finally{parking=false}}
+function closeSheet(){const sh=$('#moreSheet');const bd=$('#sheetBackdrop');const btn=$('#moreBtn');if(sh){sh.classList.remove('open');sh.style.transform='';sh.hidden=true}if(bd)bd.hidden=true;document.body.classList.remove('sheet-open');if(btn)btn.setAttribute('aria-expanded','false')}
+function openSheet(){closeNav();const sh=$('#moreSheet');const bd=$('#sheetBackdrop');const btn=$('#moreBtn');if(!sh)return;bd.hidden=false;sh.hidden=false;document.body.classList.add('sheet-open');if(btn)btn.setAttribute('aria-expanded','true');requestAnimationFrame(()=>sh.classList.add('open'));const first=sh.querySelector('a,button');if(first)first.focus()}
+function fitBars(){parkThumbs();const tab=$('.tabbar');const phone=tab&&getComputedStyle(tab).display!=='none';document.documentElement.style.setProperty('--tabbar-h',phone?(tab.offsetHeight+'px'):'0px');const dock=$('#thumbDock');const thumb=dock&&!dock.hidden?dock.offsetHeight:0;document.documentElement.style.setProperty('--thumb-h',thumb+'px')}
 function route(){clearTimers();const parts=(location.hash.replace(/^#\/?/,'')||'home').split('/');const r=parts[0];
   $$('#sidenav a').forEach(a=>a.classList.toggle('active',a.dataset.nav===r||(r==='lesson'&&a.dataset.nav==='course')));
   const tab=TAB_FOR[r]||'';
-  $$('.tabbar a').forEach(a=>a.classList.toggle('active',a.dataset.tab===tab));
-  closeNav();
-  const fn=ROUTES[r]||ROUTES.home;const app=$('#app');app.innerHTML='';fn(app,parts.slice(1));foldForViewport();window.scrollTo(0,0);updateBadges()}
+  $$('.tabbar a, .tabbar button').forEach(a=>{const on=a.dataset.tab===tab;a.classList.toggle('active',on);if(on)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current')});
+  $$('#moreSheet a[data-nav]').forEach(a=>{const on=a.dataset.nav===r;a.classList.toggle('active',on);if(on)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current')});
+  const pt=$('#pageTitle');if(pt)pt.textContent=TITLES[r]||'BS Prep';
+  closeNav();closeSheet();clearDock();
+  const fn=ROUTES[r]||ROUTES.home;const app=$('#app');app.innerHTML='';fn(app,parts.slice(1));foldForViewport();window.scrollTo(0,0);updateBadges();fitBars()}
 window.addEventListener('hashchange',route);
 function tabs(base,list,cur){return `<div class="tabs">${list.map(([k,l])=>`<a href="#/${base}/${k}" class="${k===cur?'active':''}">${l}</a>`).join('')}</div>`}
 function lessonList(sec){const ls=LESSONS.filter(l=>TOPICS[l.topic].section===sec);return `<div class="grid">${ls.map(l=>{const d=S.lessons[l.id];const m=mastery(l.topic);return `<a class="card" style="text-decoration:none;color:inherit" href="#/lesson/${l.id}"><div class="spread"><span class="tag">${esc(TOPICS[l.topic].label)}</span>${d&&d.done?`<span class="tag ok">✓ ${pct(d.score)}%</span>`:'<span class="tag">da fare</span>'}</div><h3>${esc(l.title)}</h3><div class="muted small">⏱ ${l.mins} min · padronanza argomento ${pct(m.level)}%</div></a>`}).join('')}</div>`}
@@ -122,10 +140,27 @@ const tval=k=>esc(S.texts[k]||'');
 
 $('#menuBtn').addEventListener('click',()=>{$('#sidenav').classList.contains('open')?closeNav():openNav()});
 const navBd=$('#navBackdrop');if(navBd)navBd.addEventListener('click',closeNav);
-document.addEventListener('keydown',e=>{if(e.key==='Escape')closeNav()});
+document.addEventListener('keydown',e=>{if(e.key!=='Escape')return;if(document.body.classList.contains('sheet-open')){closeSheet();const b=$('#moreBtn');if(b)b.focus();return}closeNav()});
 $('#sidenav').addEventListener('click',e=>{if(e.target.closest('a'))closeNav()});
-const wideMQ=window.matchMedia('(min-width: 768px)');
-if(wideMQ.addEventListener)wideMQ.addEventListener('change',foldForViewport);
+const moreBtn=$('#moreBtn');if(moreBtn)moreBtn.addEventListener('click',()=>{document.body.classList.contains('sheet-open')?closeSheet():openSheet()});
+const sheetBd=$('#sheetBackdrop');if(sheetBd)sheetBd.addEventListener('click',closeSheet);
+const moreSheet=$('#moreSheet');
+if(moreSheet){
+  moreSheet.addEventListener('click',e=>{if(e.target.closest('a'))closeSheet()});
+  moreSheet.addEventListener('keydown',e=>{if(e.key!=='Tab')return;const items=$$('a,button',moreSheet).filter(el=>!el.disabled&&el.getClientRects().length);if(!items.length)return;const first=items[0],last=items[items.length-1];if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus()}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus()}});
+  let drag=null;
+  const grab=$('#sheetGrab');
+  moreSheet.addEventListener('pointerdown',e=>{if(e.button!=null&&e.button!==0)return;if(e.target.closest('a,button,input,textarea,select'))return;if(grab&&!grab.contains(e.target)&&moreSheet.scrollTop>0)return;drag={y:e.clientY,id:e.pointerId};moreSheet.setPointerCapture(e.pointerId)});
+  moreSheet.addEventListener('pointermove',e=>{if(!drag||e.pointerId!==drag.id)return;const dy=Math.max(0,e.clientY-drag.y);moreSheet.style.transform='translateY('+dy+'px)'});
+  const endDrag=e=>{if(!drag||e.pointerId!==drag.id)return;const dy=Math.max(0,e.clientY-drag.y);drag=null;moreSheet.style.transform='';if(dy>72)closeSheet()};
+  moreSheet.addEventListener('pointerup',endDrag);
+  moreSheet.addEventListener('pointercancel',endDrag);
+}
+if(wideQ.addEventListener)wideQ.addEventListener('change',()=>route());
+if(phoneQ.addEventListener)phoneQ.addEventListener('change',()=>route());
+window.addEventListener('resize',fitBars);
+window.addEventListener('scroll',()=>{const bar=$('.topbar');if(bar)bar.classList.toggle('scrolled',window.scrollY>12)},{passive:true});
+new MutationObserver(()=>fitBars()).observe(document.body,{subtree:true,childList:true,attributes:true,attributeFilter:['style','class','hidden']});
 $('#themeBtn').addEventListener('click',()=>{const t=document.documentElement.dataset.theme==='dark'?'light':'dark';document.documentElement.dataset.theme=t;S.theme=t;save()});
-window.BS={get S(){return S},streakNow,route,touch,save,saveNow,record,mastery,srsGrade,srsAdd,dueCards,readiness,secProg,CARDS,ROUTES,esc,$,$$,shuffle,pct,bar,tabs,lessonList,checklist,tval,toast,countdown,clearTimers,renderMCQ,quizItem,checkItem,today,fmtDate,avg,weakTopics,firstLesson,lessonsOf,mLabel,sectionParts,COVER_FIELDS,CORE_TRAITS,go,replaceState:(ns)=>{S=Object.assign(defaults(),ns);saveNow()},resetState:()=>{S=defaults();saveNow()}};
+window.BS={get S(){return S},streakNow,route,touch,save,saveNow,record,mastery,srsGrade,srsAdd,dueCards,readiness,secProg,CARDS,ROUTES,esc,$,$$,shuffle,pct,bar,tabs,lessonList,checklist,tval,toast,countdown,clearTimers,renderMCQ,quizItem,checkItem,today,fmtDate,avg,weakTopics,firstLesson,lessonsOf,mLabel,sectionParts,COVER_FIELDS,CORE_TRAITS,go,clearDock,replaceState:(ns)=>{S=Object.assign(defaults(),ns);saveNow()},resetState:()=>{S=defaults();saveNow()}};
 })();
