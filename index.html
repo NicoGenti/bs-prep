@@ -3,9 +3,11 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://api.github.com https://*.workers.dev; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'none'">
 <title>BS Prep · Allenamento selezione Bending Spoons</title>
 <link rel="stylesheet" href="styles.css">
-<script>try{var t=JSON.parse(localStorage.getItem('bsprep.v1')||'{}').theme;if(!t)t=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';document.documentElement.dataset.theme=t}catch(e){}</script>
+<script src="theme-boot.js"></script>
 </head>
 <body>
 <header class="topbar">
@@ -14,6 +16,8 @@
   <div class="topright">
     <span id="streakBadge" class="badge" title="Giorni consecutivi di allenamento">🔥 0</span>
     <a href="#/review" id="dueBadge" class="badge" title="Ripasso di oggi">🧠 0</a>
+    <span id="syncBadge" class="badge" hidden title="Sincronizzazione GitHub">↻</span>
+    <button class="iconbtn" id="ghBtn" type="button" hidden>Accedi</button>
     <button class="iconbtn" id="themeBtn" aria-label="Tema chiaro/scuro">🌓</button>
   </div>
 </header>
@@ -37,12 +41,15 @@
   <main id="app" tabindex="-1"></main>
 </div>
 <div id="toast" class="toast" role="status"></div>
+<script src="sync-config.js"></script>
+<script src="sync-merge.js"></script>
 <script src="data-lessons.js"></script>
 <script src="data-quiz.js"></script>
 <script src="data-english.js"></script>
 <script src="content-meta.js"></script>
 <script src="generators.js"></script>
 <script src="app.js"></script>
+<script src="sync.js"></script>
 <script src="views-core.js"></script>
 <script src="views-sections.js"></script>
 </body>
