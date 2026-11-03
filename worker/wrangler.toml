@@ -2,8 +2,9 @@ name = "bs-prep-oauth"
 main = "src/index.js"
 compatibility_date = "2026-11-03"
 
-# URL del sito Pages, per esempio https://<utente>.github.io/bs-prep/
-# Il worker accetta il CORS solo sull'origin di questo URL e scambia il code
-# solo se redirect_uri coincide (lo slash finale è indifferente).
+# Origin del browser (senza path): l'header Origin non include /bs-prep/.
+# Il callback OAuth resta https://nicogenti.github.io/bs-prep/ ; il worker lo accetta
+# perché ha la stessa origin. GITHUB_CLIENT_ID è pubblico. Il secret resta fuori da qui.
 [vars]
-ALLOWED_ORIGIN = ""
+ALLOWED_ORIGIN = "https://nicogenti.github.io"
+GITHUB_CLIENT_ID = "Ov23lia3NGyf7VDiuuJN"

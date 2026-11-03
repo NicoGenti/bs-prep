@@ -32,7 +32,7 @@ node scripts/test-sync-merge.mjs
 node scripts/test-worker.mjs
 ```
 
-Senza `clientId` e `workerUrl` in `sync-config.js` il pulsante «Accedi» non c’è: il sito resta solo offline, come prima.
+In `sync-config.js` il client id c’è già. Finché `workerUrl` è vuoto il pulsante «Accedi» non compare e il sito non chiama rete: resta solo offline.
 
 ## GitHub Pages
 
@@ -83,22 +83,24 @@ Un Gist segreto **non è privato**: non è in elenco sul profilo, ma chi ha il l
 
 ### Configurazione
 
-1. **OAuth App** su GitHub: Settings → Developer settings → OAuth Apps → New OAuth App.
-   - Homepage URL: l’URL di GitHub Pages, con lo slash finale. Esempio: `https://<utente>.github.io/bs-prep/`
-   - Authorization callback URL: **lo stesso URL**.
-   - Registra l’app e genera un client secret. Il client id è pubblico; il secret no.
-2. **Cloudflare** (piano gratuito): crea un account e un API token con il permesso di modificare i Workers (template «Edit Cloudflare Workers»). Copia anche l’Account ID.
+L’OAuth App c’è già. Il client id `Ov23lia3NGyf7VDiuuJN` è in `sync-config.js` e in `worker/wrangler.toml` (è pubblico). `ALLOWED_ORIGIN` è `https://nicogenti.github.io`: il browser manda quell’origin, senza `/bs-prep/`. Il worker accetta comunque il callback `https://nicogenti.github.io/bs-prep/` e rifiuta gli altri path sullo stesso host.
+
+Manca solo Cloudflare. In ordine:
+
+1. **Account Cloudflare** gratuito, se non c’è già.
+2. **API token** con il permesso di modificare i Workers (template «Edit Cloudflare Workers»). Copia anche l’Account ID dalla pagina Workers.
 3. **Secret del repository** (Settings → Secrets and variables → Actions), usati solo dal workflow di deploy:
    - `CLOUDFLARE_API_TOKEN`
    - `CLOUDFLARE_ACCOUNT_ID`
    Se mancano, [`.github/workflows/deploy-worker.yml`](.github/workflows/deploy-worker.yml) scrive un messaggio ed esce senza errore. Parte da solo quando cambia `worker/**`, oppure a mano da Actions → **Deploy Cloudflare Worker**.
-4. In [`worker/wrangler.toml`](worker/wrangler.toml) imposta `ALLOWED_ORIGIN` con lo stesso URL della callback (lo slash finale è indifferente). È l’origine del sito: il worker rifiuta le altre. Poi fai il deploy (workflow, oppure in locale `npx wrangler deploy` dentro `worker/`).
-5. **Segreti del worker**, mai nel frontend e mai nel toml:
+4. **Segreto del worker**, una volta pubblicato (il client id è già una variabile, non un secret):
    ```bash
    cd worker
-   npx wrangler secret put GITHUB_CLIENT_ID
    npx wrangler secret put GITHUB_CLIENT_SECRET
    ```
-6. In [`sync-config.js`](sync-config.js) scrivi il client id e l’URL del worker (`https://bs-prep-oauth.<account>.workers.dev`, senza path). Fai commit: Pages ripubblica il sito e compare «Accedi».
+   Il valore è il client secret dell’OAuth App. Non va nel repository.
+5. **`workerUrl` in `sync-config.js`**: l’URL stampato dal deploy, della forma `https://bs-prep-oauth.<account>.workers.dev`, senza path. Fai commit. Pages ripubblica il sito e compare «Accedi».
+
+Callback dell’OAuth App, se va ricontrollata: Homepage URL e Authorization callback URL entrambi `https://nicogenti.github.io/bs-prep/`.
 
 La Content-Security-Policy consente script solo dal sito, e le connessioni verso `api.github.com` e `https://*.workers.dev`. Un dominio custom del worker va aggiunto a `connect-src` in `index.html`.
