@@ -47,7 +47,7 @@ try { assertStable(original, round); check('round-trip invarianti', true); }
 catch (e) { check('round-trip invarianti', false, e.message); }
 
 const lesson = original.lessons.find(l => l.id === 'cv-principi');
-const find = 'Responsible for CI/CD pipelines.';
+const find = 'Responsible for the weekly notes.';
 check('stringa di patch presente una volta', lesson.html.split(find).length - 1 === 1);
 
 const good = {

@@ -73,7 +73,7 @@ B.ROUTES.lesson=function(app,args){const S=B.S;const L=window.LESSONS,idx=L.find
   const l=L[idx],prev=L[idx-1],next=L[idx+1],sec=window.TOPICS[l.topic].section,st=S.lessons[l.id];
   app.innerHTML=`<div class="small"><a href="#/course">Corso</a> › <a href="#/${sec}">${window.SECTIONS[sec].label}</a> › ${esc(window.TOPICS[l.topic].label)}</div>
   <h1>${esc(l.title)}</h1><div class="row small muted"><span>⏱ ${l.mins} min</span>${st&&st.done?`<span class="tag ok">Completata il ${B.fmtDate(st.date)} · verifica ${pct(st.score)}%</span>`:''}</div>
-  <article class="card lesson">${l.html}</article>
+  <article class="card lesson">${window.BSSanitize.sanitizeLessonHtml(l.html)}</article>
   ${(l.cards||[]).length?`<details class="card"><summary>🧠 Concetti chiave (${l.cards.length} flashcard)</summary><table style="margin-top:.6rem">${l.cards.map(c=>`<tr><td>${esc(c[0])}</td><td>${esc(c[1])}</td></tr>`).join('')}</table></details>`:''}
   <h2>✔️ Verifica di comprensione</h2><div id="checks"></div><div id="result"></div>
   <div class="spread" style="margin-top:1.2rem">${prev?`<a class="btn ghost" href="#/lesson/${prev.id}">← ${esc(prev.title)}</a>`:'<span></span>'}${next?`<a class="btn ghost" href="#/lesson/${next.id}">${esc(next.title)} →</a>`:''}</div>`;

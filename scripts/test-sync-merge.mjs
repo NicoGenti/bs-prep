@@ -22,7 +22,7 @@ const local = {
   srs: { 'L:cv-principi:0': card('2026-11-01T10:00:00Z', 2), 'Q:python:0': card('2026-11-02T10:00:00Z', 4) },
   lessons: { 'cv-principi': { done: true, score: 0.8, date: '2026-11-01', at: '2026-11-01T10:00:00Z' } },
   checks: { 'cv:0': true },
-  texts: { cl_name: 'Nicolas' },
+  texts: { cl_name: 'Ada' },
   stories: [{ id: 's1', title: 'Pipeline', s: 'locale' }],
   psHistory: [{ date: '2026-11-01T09:00:00.000Z', type: 'mix', n: 10, correct: 7 }],
   stamps: {
@@ -61,7 +61,7 @@ check('tiene la carta solo remota', merged.srs['EX:enx-tr-01'] && merged.srs['EX
 check('la carta più recente vince anche con meno ripetizioni', merged.srs['L:cv-principi:0'].at === '2026-11-03T10:00:00.000Z' && merged.srs['L:cv-principi:0'].reps === 0);
 check('unisce le lezioni', merged.lessons['cv-principi'].done && merged.lessons['en-vocab-swe'].done);
 check('unisce le spunte', merged.checks['cv:0'] && merged.checks['cv:1']);
-check('il testo più recente resta', merged.texts.cl_name === 'Nicolas');
+check('il testo più recente resta', merged.texts.cl_name === 'Ada');
 check('la storia più recente vince e l’altra resta', merged.stories.find(s => s.id === 's1').s === 'remoto' && merged.stories.some(s => s.id === 's2'));
 check('unisce lo storico', merged.psHistory.length === 2);
 

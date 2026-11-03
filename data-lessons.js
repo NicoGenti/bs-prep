@@ -17,17 +17,17 @@ window.LESSONS = [
 {id:'cv-principi',topic:'cv',title:'Come si scrive un CV in inglese che passa lo screening',mins:10,html:String.raw`
 <p>Bending Spoons chiede un CV <b>breve, in inglese</b>, con <b>informazioni quantitative</b> (voti, metriche). Chi lo legge ha pochi minuti: il CV deve far capire in 30 secondi <i>cosa hai ottenuto</i>, non solo cosa hai fatto.</p>
 <h3>1. Struttura consigliata (1 pagina, massimo 2)</h3>
-<ol><li><b>Header</b>: nome, città (Ancona, Italy), email, link GitHub e LinkedIn.</li>
-<li><b>Summary</b> (2 righe, facoltativo): <i>"Full-stack .NET engineer building AI agent workflows (planner/explorer/implementer, MCP)…"</i></li>
+<ol><li><b>Header</b>: nome, città (Città, Paese), email, link GitHub e LinkedIn.</li>
+<li><b>Summary</b> (2 righe, facoltativo): <i>"Software engineer who ships small, measurable improvements…"</i> È solo un modello, non un profilo vero.</li>
 <li><b>Experience</b>: in ordine cronologico inverso, 3–5 bullet per ruolo.</li>
-<li><b>Projects</b>: 1–3 progetti personali, con link (il tuo lavoro sugli agenti va qui).</li>
+<li><b>Projects</b>: 1–3 progetti personali, con link. Vanno bene anche esercizi inventati, purché siano tuoi e li sappia spiegare.</li>
 <li><b>Education</b>: titolo, università, <b>voto</b> (es. 110/110) e media se buona: il modulo lo chiede.</li>
 <li><b>Skills</b>: una riga per categoria, senza barre di "livello" (non dicono nulla).</li></ol>
 <h3>2. La formula del bullet: Verbo + Cosa + Come + Risultato misurabile</h3>
 <table><tr><th>Debole</th><th>Forte</th></tr>
-<tr><td>Responsible for CI/CD pipelines.</td><td><b>Automated</b> build and release with Azure DevOps YAML pipelines, <b>cutting release time from 2 days to 40 minutes</b> across 12 services.</td></tr>
-<tr><td>Worked on microservices.</td><td><b>Split</b> a .NET monolith into 6 containerized microservices (Docker), <b>reducing p95 API latency by 35%</b>.</td></tr>
-<tr><td>Used AI tools.</td><td><b>Built</b> a multi-agent coding workflow (planner/explorer/implementer, MCP tools) that <b>drafted ~30% of PRs</b> in my team; benchmarked 5 local/hosted LLMs.</td></tr></table>
+<tr><td>Responsible for the weekly notes.</td><td><b>Wrote</b> a shared template for a sample reading club, <b>cutting prep from about 2 hours to about 25 minutes</b>.</td></tr>
+<tr><td>Worked on the website.</td><td><b>Rebuilt</b> a sample club homepage as static pages, <b>cutting load time from 4s to 1s</b> in a local test.</td></tr>
+<tr><td>Used tools.</td><td><b>Added</b> a checklist to a fictional study group so summaries went out the same day. Numeri di esempio, non un profilo reale.</td></tr></table>
 <p>Se non hai il numero esatto, usa una stima onesta e difendibile ("~30%", "about 10k daily users") e <b>sappi spiegare come l'hai calcolata</b>: al colloquio te lo chiederanno, e la loro guida dice chiaramente che non fanno offerte a chi esagera i risultati.</p>
 <h3>3. Verbi d'azione utili</h3>
 <p><code>Built, Designed, Led, Automated, Reduced, Increased, Migrated, Refactored, Shipped, Optimized, Introduced, Simplified, Mentored, Delivered</code>. Evita <i>"Responsible for", "Worked on", "Helped with", "Involved in"</i>.</p>
@@ -45,14 +45,14 @@ check:[['Quale bullet è più forte?',['Responsible for the Angular frontend.','
 <li><b>Perché loro, perché questo ruolo</b>: collega qualcosa di specifico dell'annuncio (es. "Amplify your impact with AI", "Simplify relentlessly", ownership dall'idea alla produzione) a qualcosa che hai già fatto.</li>
 <li><b>Chiusura</b>: disponibilità, entusiasmo misurato, ringraziamento.</li></ol>
 <h3>Esempio di frase "Perché questo ruolo"</h3>
-<pre>Your post says engineers should "amplify their impact with AI". That is how
-I already work: I built a planner/explorer/implementer agent pipeline with MCP
-tools and benchmarked local and hosted LLMs to pick the right model per task.</pre>
+<pre>Your post says engineers should "simplify relentlessly". In a sample project
+I kept a three-page static site instead of adding a backend nobody needed.
+This sentence is an example, not a real achievement.</pre>
 <h3>Regole d'oro</h3><ul><li>Ogni affermazione su di te va accompagnata da un fatto.</li><li>Non ripetere il CV: aggiungi il <i>perché</i>.</li><li>Tono diretto e sobrio: sono attenti all'onestà, evita superlativi.</li></ul>
 <p>Nella scheda <b>Lettera</b> trovi un costruttore guidato che assembla una bozza in inglese.</p>`,
 cards:[['Cosa deve contenere la lettera secondo la guida di Bending Spoons?','Qualità migliori, motivazione, perché questo ruolo. È facoltativa ma apprezzata.'],['Regola d\u2019oro della lettera','Ogni affermazione su di te è sostenuta da un fatto concreto; non ripetere il CV.']],
 check:[['La lettera per Bending Spoons è…',['Obbligatoria','Facoltativa ma apprezzata','Sconsigliata','Richiesta solo per ruoli senior'],1,'La guida la definisce facoltativa ma apprezzata.'],
-['Quale frase è più efficace?',['I am a very passionate and hard-working person.','I love technology since I was a child.','I cut our release time from 2 days to 40 minutes by automating Azure DevOps pipelines.','I think I would be perfect for this role.'],2,'Fatti misurabili invece di aggettivi.']]},
+['Quale frase è più efficace?',['I am a very passionate and hard-working person.','I love technology since I was a child.','For a sample reading club I cut the weekly note from about 2 hours to about 25 minutes with a shared template.','I think I would be perfect for this role.'],2,'Fatti misurabili invece di aggettivi. È un esempio inventato.']]},
 {id:'cv-github',topic:'github',title:'Un GitHub che lavora per te',mins:6,html:String.raw`
 <p>Il modulo di candidatura ha un campo per il link GitHub. Chi lo apre guarderà 1–2 repo per pochi minuti: rendili leggibili.</p>
 <h3>Checklist di un repo "vetrina"</h3>
@@ -62,7 +62,7 @@ check:[['La lettera per Bending Spoons è…',['Obbligatoria','Facoltativa ma ap
 <li>Storia dei commit pulita, messaggi chiari, PR anche nei progetti personali.</li>
 <li>Nessun segreto nei file (chiavi API!), licenza, <code>.gitignore</code>.</li></ul>
 <h3>Idea di progetto per te</h3>
-<p>Il tuo orchestratore di agenti (planner/explorer/implementer + MCP) è un ottimo candidato: aggiungi una tabella di <b>benchmark dei modelli</b> (qualità, latenza, costo) con metodologia riproducibile. Dimostra ragionamento, ownership e uso dell'AI in un colpo solo. Bonus: una piccola parte in <b>Python</b>, per colmare la lacuna principale.</p>`,
+<p>Va bene anche un progetto piccolo e inventato: il catalogo di un circolo di lettura, con README, un test e la CI. Conta che si capisca il problema, come si avvia e quali scelte hai fatto. Bonus: una piccola parte in <b>Python</b>, se vuoi esercitarti su quel linguaggio.</p>`,
 cards:[['Cosa deve avere il README di un repo vetrina?','Problema, demo, architettura, avvio in 1 comando, scelte e trade-off.']],
 check:[['Qual è la cosa più dannosa in un repo pubblico?',['Pochi commit','Chiavi API committate','Nessuna stella','README in inglese'],1,'Un segreto committato segnala scarsa attenzione alla sicurezza.']]},
 /* ================= PROBLEM SOLVING ================= */
@@ -356,7 +356,7 @@ kubectl logs orders-api-7d9f --previous      # log del container crashato
 kubectl exec -it orders-api-7d9f -- sh       # shell nel container
 kubectl port-forward svc/orders 8080:80      # test locale</pre>
 <table><tr><th>Stato</th><th>Causa tipica</th></tr><tr><td>CrashLoopBackOff</td><td>Il processo esce subito: config mancante, eccezione all'avvio.</td></tr><tr><td>ImagePullBackOff</td><td>Tag sbagliato o credenziali del registry.</td></tr><tr><td>Pending</td><td>Nessun nodo con risorse sufficienti.</td></tr><tr><td>OOMKilled</td><td>Limite di memoria superato.</td></tr></table>
-<h3>Approccio dichiarativo</h3><p>Descrivi lo stato in YAML versionato su Git e applicalo con <code>kubectl apply -f</code> (o Helm/Kustomize/GitOps con Argo CD). Simile alle tue pipeline Azure DevOps, ma il cluster riconcilia continuamente.</p>`,
+<h3>Approccio dichiarativo</h3><p>Descrivi lo stato in YAML versionato su Git e applicalo con <code>kubectl apply -f</code> (o Helm/Kustomize/GitOps con Argo CD). A differenza di uno script lanciato a mano, il cluster riconcilia continuamente.</p>`,
 cards:[['Readiness probe fallisce: cosa succede?','Il pod esce dal bilanciamento del Service, senza riavvio.'],['Liveness probe fallisce: cosa succede?','Il container viene riavviato.'],['OOMKilled','Il container ha superato il limite di memoria.'],['CrashLoopBackOff','Il container si avvia e termina ripetutamente; guarda logs --previous.'],['Rollback di un Deployment','kubectl rollout undo deploy/nome']],
 check:[['Il pod non riceve traffico durante il warm-up. Quale probe?',['Liveness','Readiness','Startup','Nessuna'],1,'La readiness controlla l\u2019ingresso nel bilanciamento.'],['Pod in Pending da minuti. Causa probabile?',['Immagine sbagliata','Nessun nodo con risorse sufficienti','Bug nel codice','Liveness fallita'],1,'Lo scheduler non trova spazio.']]},
 {id:'grpc-1',topic:'grpc',title:'gRPC vs REST: come funzionano e quando sceglierli',mins:15,html:String.raw`
@@ -482,14 +482,13 @@ check:[['Team di 3, MVP, 500 utenti. Architettura?',['20 microservizi su K8s','M
 <tr><td><b>A</b>ction</td><td>Cosa hai fatto <b>tu</b>, passo per passo, e perché. Alternative valutate.</td><td>~60%</td></tr>
 <tr><td><b>R</b>esult</td><td>Risultato misurabile + cosa hai imparato.</td><td>~20%</td></tr></table>
 <h3>Esempio (in inglese, come al colloquio)</h3>
-<pre>S: Our release process took two days and broke often; 12 .NET services.
-T: I volunteered to own the CI/CD redesign, outside my assigned tasks.
-A: I mapped every manual step, proposed YAML pipelines in Azure DevOps with
-   reusable templates, ran a pilot on 2 services, measured failure rate,
-   then onboarded the rest and wrote the runbook. A teammate handled the
-   test environments; I did the pipeline templates and the rollout.
-R: Release time went from 2 days to 40 minutes; failed releases dropped
-   from ~1 in 4 to ~1 in 20. I learned to pilot before scaling a change.</pre>
+<pre>S: A sample reading club wrote its weekly note by hand. It took about 2 hours.
+T: Nobody owned a template. I volunteered.
+A: I drafted one reusable note and a checklist, piloted it for a single week,
+   then showed the others. A teammate collected the book list; I wrote the
+   template and sent that one pilot.
+R: Prep went from about 2 hours to about 25 minutes. I learned to try one
+   week before changing the habit. This story is fictional.</pre>
 <h3>"Io" vs "noi": l'onestà conta</h3><p>La guida di Bending Spoons è esplicita: non fanno offerte se emergono risultati esagerati. Separa sempre ciò che hai fatto tu da ciò che ha fatto il team ("A teammate handled X; I did Y"). Aspettati domande di approfondimento: "Cosa avresti fatto diversamente?", "Come hai misurato?".</p>
 <h3>Prepara un portafoglio di 5–6 storie</h3><p>Copri: ownership (hai preso in carico qualcosa senza che te lo chiedessero), ambizione/alto standard, lavoro di squadra, conflitto/feedback difficile, fallimento e cosa hai imparato, semplificazione. Una storia può coprire più tratti. Usa lo <b>STAR builder</b> per scriverle e la <b>simulazione</b> per esercitarti a voce.</p>
 <h3>Durata</h3><p>2–3 minuti a risposta. Allenati con il timer: troppo corta = superficiale, troppo lunga = perdi l'interlocutore.</p>`,
