@@ -1,30 +1,93 @@
 # BS Prep
 
-Sito statico, in italiano, per preparare la selezione **Software Engineer** di Bending Spoons. È pratica nello stile descritto pubblicamente dall’azienda (problem solving, fondamenti, system design, coding, colloquio comportamentale, referenze): non contiene le domande reali dei test.
+![Security tests](https://github.com/NicoGenti/bs-prep/actions/workflows/security-tests.yml/badge.svg)
+![CodeQL](https://github.com/NicoGenti/bs-prep/actions/workflows/codeql.yml/badge.svg)
+![Deploy GitHub Pages](https://github.com/NicoGenti/bs-prep/actions/workflows/pages.yml/badge.svg)
 
-C’è anche una sezione **Inglese tecnico**: vocabolario di software engineering, system design e dati, false friends e errori tipici di chi parla italiano, messaggi Slack/email, design doc, PR e code review, ragionamento ad alta voce e risposte STAR. Le spiegazioni sono in italiano, il materiale da praticare è in inglese. Nella scheda Speaking si può ascoltare domanda e risposta con la sintesi vocale del browser (Web Speech API): se non c’è, il sito resta usabile e non fa richieste di rete.
+BS Prep is a dependency-free, offline-first web application for preparing for a **Software Engineer** selection process. It combines structured study content, spaced repetition, quizzes, technical English practice, and optional encrypted-at-rest-free GitHub Gist synchronization.
 
-I progressi restano nel browser (`localStorage`, chiave `bsprep.v1`): lezioni, punteggi e ripasso spaziato SM-2. Le carte usano id stabili (`L:lezione:indice`, `Q:argomento:indice`, `EX:enx-…`, `SP:ens-…`). Per questo gli aggiornamenti automatici non cancellano né riusano gli id esistenti.
-
-![Inglese tecnico](docs/screenshot-english.png)
+The application is built with vanilla JavaScript, HTML, and CSS. It runs entirely in the browser, with no runtime framework and no required backend for core study features.
 
 ![Dashboard](docs/screenshot.png)
-![Tema scuro](docs/screenshot-dark.png)
+![Dark theme](docs/screenshot-dark.png)
 ![Mobile](docs/screenshot-mobile.png)
 
-## Uso in locale
+## What it does
 
-Non c’è build. Dalla radice del repository:
+- Provides practice material for problem solving, technical fundamentals, system design, coding, behavioral interviews, and references.
+- Includes a technical English section covering software engineering vocabulary, system design, data terminology, false friends, Slack/email writing, design documents, pull requests, and STAR responses.
+- Tracks lesson completion, quiz scores, daily activity, and SM-2 spaced-repetition cards in `localStorage`.
+- Generates a daily review queue from due spaced-repetition cards.
+- Supports optional GitHub login and synchronization through a user-owned secret Gist.
+- Works as an installable PWA with offline-friendly static assets.
+
+The project does not contain real Bending Spoons interview questions. It is an independent preparation tool inspired by publicly described interview areas.
+
+## Technical highlights
+
+| Area | Implementation |
+|---|---|
+| Frontend | Vanilla JavaScript, HTML, CSS, Web Components-free modular scripts |
+| State | Browser `localStorage` with stable, versioned identifiers |
+| Spaced repetition | SM-2 scheduling for lesson and quiz cards |
+| Synchronization | GitHub Gist backup with timestamp-based merge logic |
+| OAuth | Cloudflare Worker exchanges a GitHub OAuth code for a scoped access token |
+| Security | Strict HTML allowlist sanitizer, CSP, OAuth state validation, security regression tests |
+| CI/CD | GitHub Actions for Pages deployment, security tests, CodeQL, and content updates |
+| Dependencies | No runtime npm dependencies for the main application |
+
+## Architecture
+
+```text
+Browser app
+├── Static HTML/CSS/JavaScript
+├── Local progress store (localStorage)
+├── HTML allowlist sanitizer
+├── SM-2 review scheduler
+└── Optional GitHub Gist sync
+        │
+        └── Cloudflare Worker
+            ├── OAuth state issuance and verification
+            ├── GitHub code-to-token exchange
+            ├── CORS origin allowlist
+            └── Scope validation (gist only)
+```
+
+The browser communicates directly with `api.github.com` after OAuth. The Worker never stores or logs the GitHub access token; it only performs the short-lived code-for-token exchange and returns the token to the user’s browser.
+
+## Security model
+
+- Lesson HTML is sanitized with a strict tag and class allowlist before rendering.
+- A Content Security Policy restricts scripts, connections, frames, object embedding, and base URI usage.
+- OAuth state values are HMAC-signed, time-limited, and verified with constant-time digest comparison.
+- The Worker validates the OAuth redirect URI against an explicit origin allowlist.
+- The GitHub token is requested with the narrow `gist` scope only.
+- Security regression tests cover XSS-style payloads, event handlers, dangerous URLs, mutation-XSS-like input, OAuth state tampering, invalid redirects, oversized requests, and unexpected OAuth scopes.
+- CodeQL and Dependabot provide continuous static analysis and dependency update automation.
+
+For responsible disclosure, see [SECURITY.md](SECURITY.md).
+
+## Run locally
+
+No build step is required.
 
 ```bash
+git clone https://github.com/NicoGenti/bs-prep.git
+cd bs-prep
 python3 -m http.server 8000
 ```
 
-Apri [http://127.0.0.1:8000](http://127.0.0.1:8000). Funziona anche aprendo `index.html` direttamente: script, stili e dati sono file locali, e il sito non chiama rete da solo. I link a documenti esterni (processo di selezione, LeetCode, NeetCode) si aprono solo se li clicchi.
+Open <http://127.0.0.1:8000>.
 
-Dalla home si vedono la prontezza, il ripasso del giorno e le sezioni, compresa Inglese tecnico. «Ultimo aggiornamento contenuti» è la data dell’ultimo giro dello script mensile (all’inizio, la data del materiale iniziale).
+The core application works without network access. External documentation links open only when selected.
 
-Per rifare i test locali:
+## Run tests
+
+```bash
+npm test
+```
+
+The repository also includes focused scripts for content-update, synchronization merge, and Worker behavior:
 
 ```bash
 node scripts/test-update.mjs
@@ -32,70 +95,50 @@ node scripts/test-sync-merge.mjs
 node scripts/test-worker.mjs
 ```
 
-In `sync-config.js` il client id e l’URL del Worker ci sono già: `https://bs-prep-oauth.nicolas-gentilucci.workers.dev`. «Accedi» compare dopo il deploy di Pages. Lo scambio del token funziona solo dopo aver impostato il secret sul Worker.
+## Deployment
 
-## GitHub Pages
+### GitHub Pages
 
-Il workflow [`.github/workflows/pages.yml`](.github/workflows/pages.yml) pubblica il sito con le action ufficiali `configure-pages`, `upload-pages-artifact` e `deploy-pages`. Parte a ogni push su `main` e si può lanciare a mano (Actions → **Deploy GitHub Pages** → Run workflow).
+The site is deployed through [`.github/workflows/pages.yml`](.github/workflows/pages.yml) on every push to `main`. It can also be run manually from **Actions → Deploy GitHub Pages → Run workflow**.
 
-### Cosa configurare (una volta)
+### Cloudflare Worker
 
-1. **Secret del modello.** Settings → Secrets and variables → Actions → New repository secret.
-   - Nome: `LLM_API_KEY`
-   - Valore: la chiave di un’API chat completions compatibile con OpenAI.
-2. **Variabili opzionali** (Settings → Secrets and variables → Actions → Variables, non Secrets):
-   - `LLM_BASE_URL` — default `https://api.openai.com/v1` (senza barra finale; lo script accetta anche la barra).
-   - `LLM_MODEL` — default `gpt-4o-mini`.
-3. **Pages.** Settings → Pages → Build and deployment → Source: **GitHub Actions**. Salva. Poi, se il primo deploy è fallito perché Pages non era ancora attivo, rilancia **Deploy GitHub Pages**.
+The OAuth helper is deployed through [`.github/workflows/deploy-worker.yml`](.github/workflows/deploy-worker.yml) when files under `worker/` change.
 
-Il sito pubblicato è l’insieme di `index.html`, CSS, JS e dati. Workflow, script e screenshot in `docs/` non vengono caricati.
+Required repository secrets:
 
-### Repository privato
+- `CLOUDFLARE_API_TOKEN`
+- `CLOUDFLARE_ACCOUNT_ID`
 
-GitHub Pages su un repository **privato** richiede **GitHub Pro** o **GitHub Team** (oppure il repository va reso pubblico). Anche con Pro/Team, il sito Pages di un repository privato **è raggiungibile da chiunque abbia l’URL**: l’accesso al codice resta privato, la pagina no.
+Required Worker secret:
 
-## Aggiornamento mensile dei contenuti
+- `GITHUB_CLIENT_SECRET`
 
-[`.github/workflows/monthly-update.yml`](.github/workflows/monthly-update.yml) gira il 1° di ogni mese alle 08:00 UTC e si può lanciare a mano: Actions → **Aggiornamento contenuti mensile** → Run workflow.
+The GitHub OAuth client ID is public and is configured in `sync-config.js` and `worker/wrangler.toml`.
 
-Lo script [`scripts/update-content.mjs`](scripts/update-content.mjs) (Node, senza dipendenze) chiede al modello di aggiornare nozioni superate e di aggiungere lezioni, carte, quiz, esercizi di inglese e domande di speaking su tecnologie e pratiche di colloquio utili per questa selezione. Poi:
+## Content updates
 
-- controlla lo schema JSON e sanifica l’HTML delle lezioni (solo tag di una lista chiusa);
-- rifiuta id già usati, rimozioni, indici fuori posto e crescite assurde;
-- esegue `node --check` sui file generati e li ricarica;
-- se un controllo fallisce, **non scrive nulla** e il workflow si ferma senza commit;
-- se `LLM_API_KEY` manca, scrive un messaggio chiaro ed esce senza errore;
-- se c’è materiale nuovo, aggiorna la data «Ultimo aggiornamento contenuti» e apre (o aggiorna) una pull request sul branch `content-update-YYYY-MM-DD`. Non fa push su `main`.
+A monthly workflow can propose new or refreshed study content through a pull request. The update script validates the generated JSON schema, sanitizes lesson HTML, rejects duplicate or unstable identifiers, checks generated JavaScript syntax, and avoids committing when validation fails.
 
-`main` è protetto: la PR va approvata e unita a mano. Il merge avvia il workflow Pages, che pubblica il sito. In Settings → Actions → General serve **Allow GitHub Actions to create and approve pull requests**, altrimenti il token del workflow non può aprire la PR. Il workflow non la approva da solo.
+The workflow requires an OpenAI-compatible chat-completions API key stored as the `LLM_API_KEY` repository secret. It never pushes directly to `main`; proposed changes require manual review and merge.
 
-Lo script non scrive nei log il corpo delle risposte dell’API. Gli id già in uso non si toccano: si aggiungono id nuovi (il modello è istruito a prefissarli con `auto-` e la data) oppure si corregge solo il testo, carte e domande restano allo stesso indice.
+## Project structure
 
-## Accesso GitHub (opzionale)
+```text
+.
+├── index.html                  # Application shell and PWA entry point
+├── app.js                      # Application bootstrap and routing
+├── views-*.js                  # UI views and section rendering
+├── generators.js               # Practice content generators
+├── html-sanitize.js            # Strict HTML sanitizer
+├── sync.js / sync-merge.js     # GitHub Gist synchronization and merge logic
+├── data-*.js                   # Static study content
+├── worker/                     # Cloudflare Worker for GitHub OAuth
+├── scripts/                    # Content update and local test scripts
+├── tests/                      # Security and integration regression tests
+└── .github/workflows/          # CI/CD, Pages, CodeQL, and automation
+```
 
-Chiunque abbia un account GitHub può salvare i progressi in un **Gist segreto del proprio account**. Senza accesso il sito funziona tutto in locale, esattamente come prima: lezioni, quiz, ripasso SM-2 ed export/import JSON non dipendono dal login.
+## License
 
-Il sito è statico, quindi non può custodire il client secret. Lo scambio `code` → token lo fa un Cloudflare Worker in [`worker/`](worker/). Chiede solo lo scope `gist`, controlla `state` (firmato, a scadenza, senza memorizzarlo) e l’origine CORS. Non scrive log e non tiene il token: lo rimanda al browser, che da lì parla solo con `api.github.com`.
-
-Il token resta in `localStorage` (`bsprep.oauth`), separato dai progressi. In impostazioni è spiegato: serve solo a leggere e scrivere i Gist, ed «Esci» lo cancella. All’accesso il sito cerca o crea `bs-prep-progress.json`, scarica i dati, li unisce a quelli locali (per ogni voce vince il timestamp più recente; una carta SM-2 presente su un solo lato non si perde) e poi riscrive il Gist. I salvataggi partono qualche secondo dopo una modifica, quando la scheda va in secondo piano, e da «Sincronizza ora». Se la rete manca, i progressi restano sul dispositivo e il tentativo si ripete.
-
-Un Gist segreto **non è privato**: non è in elenco sul profilo, ma chi ha il link può leggerlo.
-
-### Configurazione
-
-L’OAuth App c’è già. Il client id `Ov23lia3NGyf7VDiuuJN` è in `sync-config.js` e in `worker/wrangler.toml` (è pubblico). `ALLOWED_ORIGIN` è `https://nicogenti.github.io`: il browser manda quell’origin, senza `/bs-prep/`. Il worker accetta comunque il callback `https://nicogenti.github.io/bs-prep/` e rifiuta gli altri path sullo stesso host.
-
-Manca solo Cloudflare. In ordine:
-
-1. **Account Cloudflare** gratuito, se non c’è già.
-2. **API token** con il permesso di modificare i Workers (template «Edit Cloudflare Workers»). Copia anche l’Account ID dalla pagina Workers.
-3. **Secret del repository** (Settings → Secrets and variables → Actions), usati solo dal workflow di deploy:
-   - `CLOUDFLARE_API_TOKEN`
-   - `CLOUDFLARE_ACCOUNT_ID`
-   Se mancano, [`.github/workflows/deploy-worker.yml`](.github/workflows/deploy-worker.yml) scrive un messaggio ed esce senza errore. Parte da solo quando cambia `worker/**`, oppure a mano da Actions → **Deploy Cloudflare Worker**.
-4. **Segreto del worker.** Il client id è già una variabile in `wrangler.toml`. Il client secret va solo in Cloudflare: Worker `bs-prep-oauth` → Settings → Variables and Secrets → aggiungi `GITHUB_CLIENT_SECRET`. Non va nel repository e non va chiesto in chat.
-5. L’URL del Worker in `sync-config.js` è già `https://bs-prep-oauth.nicolas-gentilucci.workers.dev`. Dopo il deploy di Pages compare «Accedi».
-
-Callback dell’OAuth App, se va ricontrollata: Homepage URL e Authorization callback URL entrambi `https://nicogenti.github.io/bs-prep/`.
-
-La Content-Security-Policy consente script solo dal sito, e le connessioni verso `api.github.com` e `https://*.workers.dev`. Un dominio custom del worker va aggiunto a `connect-src` in `index.html`.
+All rights reserved. See the repository for current licensing information.
