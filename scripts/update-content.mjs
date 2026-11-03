@@ -19,6 +19,14 @@ import vm from 'node:vm';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
+const sanitizeLessonHtml = loadSanitizer();
+function loadSanitizer() {
+  const context = vm.createContext({ window: {}, console });
+  const file = fileURLToPath(new URL('../html-sanitize.js', import.meta.url));
+  vm.runInContext(fs.readFileSync(file, 'utf8'), context, { filename: file });
+  return context.window.BSSanitize.sanitizeLessonHtml;
+}
+
 const ROOT_FILES = ['data-lessons.js', 'data-quiz.js', 'data-english.js', 'content-meta.js'];
 const ID_RE = /^[a-z0-9][a-z0-9-]{0,80}$/;
 const URL_RE = /^https:\/\/[^\s"'<>]+$/;
@@ -203,6 +211,18 @@ function str(value, where, errors, min, max) {
   dangerous(value, where, errors);
   return value;
 }
+function htmlStr(value, where, errors, min, max) {
+  if (typeof value !== 'string' || value.length > max) {
+    errors.push(where + `: attesa una stringa di ${min}–${max} caratteri`);
+    return '';
+  }
+  const clean = sanitizeLessonHtml(value);
+  if (clean.trim().length < min) {
+    errors.push(where + ': HTML troppo corto dopo la sanificazione');
+    return '';
+  }
+  return clean;
+}
 
 function optionsOf(value, where, errors) {
   if (!Array.isArray(value) || value.length < 2 || value.length > 6) {
@@ -290,9 +310,10 @@ export function validateAndApply(before, payload) {
       if (n !== 1) errors.push('lessonPatches.' + p.id + ': il testo da sostituire compare ' + n + ' volte (ne serve una)');
       else html = html.replace(find, replace);
     }
-    if (html.length < original.length * 0.6) errors.push('lessonPatches.' + p.id + ': la lezione si accorcia troppo');
-    if (html.length > LIMITS.maxHtml) errors.push('lessonPatches.' + p.id + ': HTML troppo lungo');
-    if (!errors.length) lesson.html = html;
+    const cleanHtml = sanitizeLessonHtml(html);
+    if (cleanHtml.length < original.length * 0.6) errors.push('lessonPatches.' + p.id + ': la lezione si accorcia troppo');
+    if (cleanHtml.length > LIMITS.maxHtml) errors.push('lessonPatches.' + p.id + ': HTML troppo lungo');
+    if (!errors.length) lesson.html = cleanHtml;
   }
 
   for (const u of lessonUpdates) {
@@ -357,7 +378,7 @@ export function validateAndApply(before, payload) {
     if (!topicSection(l.topic)) errors.push('newLessons.' + l.id + ': topic inesistente ' + l.topic);
     const title = str(l.title, 'newLessons.title', errors, 8, 140);
     if (!Number.isInteger(l.mins) || l.mins < 3 || l.mins > 45) errors.push('newLessons.' + l.id + ': mins fra 3 e 45');
-    const html = str(l.html, 'newLessons.html', errors, LIMITS.minNewHtml, LIMITS.maxHtml);
+    const html = htmlStr(l.html, 'newLessons.html', errors, LIMITS.minNewHtml, LIMITS.maxHtml);
     if (!Array.isArray(l.cards) || l.cards.length < 1 || l.cards.length > 20) errors.push('newLessons.' + l.id + ': da 1 a 20 carte');
     if (!Array.isArray(l.check) || l.check.length < 1 || l.check.length > 8) errors.push('newLessons.' + l.id + ': da 1 a 8 verifiche');
     const cards = [];
@@ -421,7 +442,7 @@ export function validateAndApply(before, payload) {
     else sdIds.add(p.id);
     const title = str(p && p.title, 'sd.title', errors, 4, 140);
     const brief = str(p && p.brief, 'sd.brief', errors, 20, 800);
-    const outline = str(p && p.outline, 'sd.outline', errors, 40, 8000);
+    const outline = htmlStr(p && p.outline, 'sd.outline', errors, 40, 8000);
     if (title && brief && outline) model.sd.push({ id: p.id, title, brief, outline });
   }
   for (const p of pyAppend) {
@@ -625,7 +646,7 @@ async function callModel(model) {
   };
   let out = await send(true);
   if (!out.ok && out.status === 400 && /response_format|json_object|max_tokens/i.test(out.text)) out = await send(false);
-  if (!out.ok) throw new Error('LLM HTTP ' + out.status + ': ' + out.text.slice(0, 400));
+  if (!out.ok) throw new Error('LLM HTTP ' + out.status);
   let data;
   try { data = JSON.parse(out.text); }
   catch { throw new Error('Risposta HTTP del provider non JSON'); }

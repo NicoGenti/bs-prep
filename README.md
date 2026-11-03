@@ -60,16 +60,16 @@ GitHub Pages su un repository **privato** richiede **GitHub Pro** o **GitHub Tea
 
 Lo script [`scripts/update-content.mjs`](scripts/update-content.mjs) (Node, senza dipendenze) chiede al modello di aggiornare nozioni superate e di aggiungere lezioni, carte, quiz, esercizi di inglese e domande di speaking su tecnologie e pratiche di colloquio utili per questa selezione. Poi:
 
-- controlla lo schema JSON;
-- rifiuta id già usati, rimozioni, indici fuori posto, HTML pericoloso e crescite assurde;
+- controlla lo schema JSON e sanifica l’HTML delle lezioni (solo tag di una lista chiusa);
+- rifiuta id già usati, rimozioni, indici fuori posto e crescite assurde;
 - esegue `node --check` sui file generati e li ricarica;
 - se un controllo fallisce, **non scrive nulla** e il workflow si ferma senza commit;
-- se `LLM_API_KEY` manca, scrive un messaggio chiaro ed esce senza errore (nessun commit);
-- se c’è materiale nuovo, aggiorna la data «Ultimo aggiornamento contenuti» e il workflow fa commit su `main` con messaggio `chore: aggiornamento contenuti YYYY-MM-DD`.
+- se `LLM_API_KEY` manca, scrive un messaggio chiaro ed esce senza errore;
+- se c’è materiale nuovo, aggiorna la data «Ultimo aggiornamento contenuti» e apre (o aggiorna) una pull request sul branch `content-update-YYYY-MM-DD`. Non fa push su `main`.
 
-Un commit fatto con `GITHUB_TOKEN` non rilancia gli altri workflow. Per questo, se il commit c’è, lo stesso workflow chiama il deploy di Pages (`workflow_call`).
+`main` è protetto: la PR va approvata e unita a mano. Il merge avvia il workflow Pages, che pubblica il sito. In Settings → Actions → General serve **Allow GitHub Actions to create and approve pull requests**, altrimenti il token del workflow non può aprire la PR. Il workflow non la approva da solo.
 
-Gli id già in uso non si toccano: si aggiungono id nuovi (il modello è istruito a prefissarli con `auto-` e la data) oppure si corregge solo il testo, carte e domande restano allo stesso indice.
+Lo script non scrive nei log il corpo delle risposte dell’API. Gli id già in uso non si toccano: si aggiungono id nuovi (il modello è istruito a prefissarli con `auto-` e la data) oppure si corregge solo il testo, carte e domande restano allo stesso indice.
 
 ## Accesso GitHub (opzionale)
 
