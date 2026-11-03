@@ -33,7 +33,9 @@ jobs:
           mkdir -p _site
           cp index.html styles.css theme-boot.js app.js views-core.js views-sections.js generators.js \
             sync-config.js sync-merge.js sync.js html-sanitize.js \
-            data-lessons.js data-quiz.js data-english.js content-meta.js _site/
+            data-lessons.js data-quiz.js data-english.js content-meta.js \
+            manifest.webmanifest icon.svg apple-touch-icon.png icon-192.png icon-512.png \
+            icon-192-maskable.png icon-512-maskable.png _site/
 
       - name: Carica l'artifact
         uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3
