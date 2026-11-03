@@ -1,0 +1,12 @@
+{
+  "name": "bs-prep",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Security regression tests for bs-prep client-side content sanitization.",
+  "scripts": {
+    "test": "node --test tests/"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
