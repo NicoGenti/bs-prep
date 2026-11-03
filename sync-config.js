@@ -1,5 +1,6 @@
-/* Login GitHub opzionale. Lascia clientId e workerUrl vuoti per il solo uso offline. */
+/* Login GitHub opzionale. Il client id è pubblico.
+   workerUrl vuoto: il pulsante Accedi resta nascosto e il sito non chiama rete. */
 window.BS_SYNC = {
-  clientId: "",
+  clientId: "Ov23lia3NGyf7VDiuuJN",
   workerUrl: ""
 };

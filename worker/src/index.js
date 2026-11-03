@@ -1,5 +1,6 @@
 /* Scambia il code OAuth di GitHub con un access token. Non salva e non registra nulla.
-   Segreti: GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET. Variabile: ALLOWED_ORIGIN. */
+   Variabili: ALLOWED_ORIGIN (solo origin, senza path), GITHUB_CLIENT_ID.
+   Segreto: GITHUB_CLIENT_SECRET. */
 
 const TOKEN_URL = 'https://github.com/login/oauth/access_token';
 const STATE_TTL_MS = 10 * 60 * 1000;
@@ -84,10 +85,21 @@ export async function verifyState(secret, state, now) {
   if (expected.length !== sig.length || hexToBytes(sig).length !== 32) return false;
   return safeEqual(expected, sig);
 }
-function redirectAllowed(env, redirectUri) {
+/* Path del sito su GitHub Pages. L'header Origin è solo https://<user>.github.io. */
+const PAGES_PATH = '/bs-prep/';
+export function redirectAllowed(env, redirectUri) {
   const want = canonicalRedirect(redirectUri);
   if (!want) return false;
-  return allowedOrigins(env).some(entry => canonicalRedirect(entry) === want);
+  let wantUrl;
+  try { wantUrl = new URL(want); } catch { return false; }
+  return allowedOrigins(env).some(entry => {
+    let configured;
+    try { configured = new URL(entry); } catch { return false; }
+    if (configured.protocol !== 'https:' || configured.origin !== wantUrl.origin) return false;
+    const path = configured.pathname || '/';
+    if (path === '/') return wantUrl.pathname === PAGES_PATH || wantUrl.pathname === '/';
+    return canonicalRedirect(entry) === want;
+  });
 }
 
 export async function handle(request, env, fetchImpl) {

@@ -1,4 +1,4 @@
-import { handle, issueState, verifyState } from '../worker/src/index.js';
+import { handle, issueState, verifyState, redirectAllowed } from '../worker/src/index.js';
 
 let failed = 0;
 const logs = [];
@@ -17,7 +17,7 @@ function check(name, cond, detail) {
 const env = {
   GITHUB_CLIENT_ID: 'Iv1.testclient',
   GITHUB_CLIENT_SECRET: 'super-secret-value',
-  ALLOWED_ORIGIN: 'https://nicogenti.github.io/bs-prep'
+  ALLOWED_ORIGIN: 'https://nicogenti.github.io'
 };
 const origin = 'https://nicogenti.github.io';
 
@@ -49,6 +49,10 @@ const ok = await handle(req('/token', {
 const token = await ok.json();
 check('scambio riuscito', ok.status === 200 && token.access_token === 'gho_goodtokenvalue' && token.scope === 'gist');
 check('chiama solo GitHub', ghCall && ghCall.url === 'https://github.com/login/oauth/access_token' && ghCall.body.includes('client_secret=super-secret-value'));
+check('il callback tiene il path /bs-prep', ghCall.body.includes('redirect_uri=https%3A%2F%2Fnicogenti.github.io%2Fbs-prep') && !ghCall.body.includes('redirect_uri=https%3A%2F%2Fnicogenti.github.io%2Fbs-prep%2Faltro'));
+check('origin senza path accetta /bs-prep/', redirectAllowed(env, 'https://nicogenti.github.io/bs-prep/') && redirectAllowed(env, 'https://nicogenti.github.io/bs-prep/index.html'));
+check('origin senza path rifiuta un altro progetto', !redirectAllowed(env, 'https://nicogenti.github.io/altro/'));
+check('manca solo il secret', (await handle(req('/state'), { ALLOWED_ORIGIN: env.ALLOWED_ORIGIN, GITHUB_CLIENT_ID: env.GITHUB_CLIENT_ID }, async () => { throw new Error('no'); })).status === 503);
 check('la risposta non contiene il secret', !JSON.stringify(token).includes('super-secret') && !('client_secret' in token));
 check('CORS sulla risposta', ok.headers.get('Access-Control-Allow-Origin') === origin && ok.headers.get('Cache-Control') === 'no-store');
 
