@@ -125,12 +125,15 @@ export async function handle(request, env, fetchImpl) {
   if (url.pathname === '/token' && request.method === 'POST') {
     const contentType = String(request.headers.get('content-type') || '').toLowerCase();
     if (!contentType.includes('application/json')) return reply({ error: 'unsupported_media_type' }, 415, headers);
-    const contentLength = Number(request.headers.get('content-length') || '0');
-    if (!Number.isFinite(contentLength) || contentLength <= 0 || contentLength > MAX_BODY_BYTES) {
+
+    const rawBody = await request.text();
+    const bodyBytes = new TextEncoder().encode(rawBody).byteLength;
+    if (bodyBytes === 0 || bodyBytes > MAX_BODY_BYTES) {
       return reply({ error: 'payload_too_large' }, 413, headers);
     }
+
     let body;
-    try { body = await request.json(); } catch { return reply({ error: 'bad_request' }, 400, headers); }
+    try { body = JSON.parse(rawBody); } catch { return reply({ error: 'bad_request' }, 400, headers); }
     const code = body && body.code;
     const state = body && body.state;
     const redirectUri = body && body.redirect_uri;

@@ -12,6 +12,7 @@ const ENV = {
 };
 const ORIGIN = 'https://example.github.io';
 const REDIRECT = 'https://example.github.io/bs-prep/';
+const MAX_BODY_BYTES = 10240;
 
 function jsonRequest(path, body, headers = {}) {
   return new Request('https://worker.example' + path, {
@@ -67,10 +68,15 @@ test('rejects a redirect outside the configured origin', async () => {
 
 test('rejects an oversized token request', async () => {
   const state = await worker.issueState(ENV.GITHUB_CLIENT_SECRET);
-  const body = JSON.stringify({ code: 'validcode123', state, redirect_uri: REDIRECT });
+  const body = JSON.stringify({
+    code: 'validcode123',
+    state,
+    redirect_uri: REDIRECT,
+    padding: 'x'.repeat(MAX_BODY_BYTES + 1)
+  });
   const request = new Request('https://worker.example/token', {
     method: 'POST',
-    headers: { Origin: ORIGIN, 'Content-Type': 'application/json', 'Content-Length': String(body.length + 1) },
+    headers: { Origin: ORIGIN, 'Content-Type': 'application/json' },
     body
   });
   const response = await worker.handle(request, ENV, async () => new Response('{}'));
@@ -80,7 +86,7 @@ test('rejects an oversized token request', async () => {
 test('rejects a non-JSON token request', async () => {
   const request = new Request('https://worker.example/token', {
     method: 'POST',
-    headers: { Origin: ORIGIN, 'Content-Type': 'text/plain', 'Content-Length': '2' },
+    headers: { Origin: ORIGIN, 'Content-Type': 'text/plain' },
     body: '{}'
   });
   const response = await worker.handle(request, ENV, async () => new Response('{}'));
