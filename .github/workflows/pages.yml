@@ -27,8 +27,6 @@ jobs:
 
       - name: Configura Pages
         uses: actions/configure-pages@v5
-        with:
-          enablement: true
 
       - name: Prepara i file del sito
         run: |
