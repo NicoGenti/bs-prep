@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BS Prep · Allenamento selezione Bending Spoons</title>
+<link rel="stylesheet" href="styles.css">
+<script>try{var t=JSON.parse(localStorage.getItem('bsprep.v1')||'{}').theme;if(!t)t=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';document.documentElement.dataset.theme=t}catch(e){}</script>
+</head>
+<body>
+<header class="topbar">
+  <button class="iconbtn" id="menuBtn" aria-label="Menu">☰</button>
+  <a href="#/home" class="brand">🥄 <b>BS Prep</b><span class="muted small"> · Software Engineer</span></a>
+  <div class="topright">
+    <span id="streakBadge" class="badge" title="Giorni consecutivi di allenamento">🔥 0</span>
+    <a href="#/review" id="dueBadge" class="badge" title="Ripasso di oggi">🧠 0</a>
+    <button class="iconbtn" id="themeBtn" aria-label="Tema chiaro/scuro">🌓</button>
+  </div>
+</header>
+<div class="layout">
+  <nav id="sidenav" class="sidenav">
+    <a href="#/home" data-nav="home">🏠 Dashboard</a>
+    <a href="#/review" data-nav="review">🧠 Ripasso di oggi</a>
+    <div class="navsep">Fasi della selezione</div>
+    <a href="#/cv" data-nav="cv">1 · CV e lettera</a>
+    <a href="#/ps" data-nav="ps">2 · Problem solving</a>
+    <a href="#/tech" data-nav="tech">3 · Test tecnici</a>
+    <a href="#/behav" data-nav="behav">4 · Comportamentale</a>
+    <a href="#/refs" data-nav="refs">5 · Referenze</a>
+    <div class="navsep">Trasversale</div>
+    <a href="#/en" data-nav="en">🇬🇧 Inglese tecnico</a>
+    <p class="small muted" id="contentUpdated" style="margin:.9rem .7rem .2rem">Ultimo aggiornamento contenuti</p>
+    <div class="navsep">Altro</div>
+    <a href="#/course" data-nav="course">📚 Tutte le lezioni</a>
+    <a href="#/settings" data-nav="settings">⚙️ Progressi e backup</a>
+  </nav>
+  <main id="app" tabindex="-1"></main>
+</div>
+<div id="toast" class="toast" role="status"></div>
+<script src="data-lessons.js"></script>
+<script src="data-quiz.js"></script>
+<script src="data-english.js"></script>
+<script src="content-meta.js"></script>
+<script src="generators.js"></script>
+<script src="app.js"></script>
+<script src="views-core.js"></script>
+<script src="views-sections.js"></script>
+</body>
+</html>
