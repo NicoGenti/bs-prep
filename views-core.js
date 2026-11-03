@@ -10,34 +10,42 @@ B.ROUTES.home=function(app){const S=B.S;const r=B.readiness();const due=B.dueCar
   const label=r>=.85?'Pronto a candidarti':r>=.7?'Quasi pronto':r>=.4?'In crescita':'Agli inizi';
   const next=window.LESSONS.find(l=>!(S.lessons[l.id]&&S.lessons[l.id].done));
   const days=[];for(let i=13;i>=0;i--){const d=new Date();d.setDate(d.getDate()-i);const ds=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');days.push([ds,S.activity[ds]||0])}
+  const hero=due
+    ?`<div class="card dash-hero"><p class="small muted">Da fare ora</p><h2 style="margin:.15rem 0 .4rem">Ripasso di oggi</h2><p class="big"><b>${due}</b> ${due===1?'carta':'carte'} da ripassare</p><div class="thumb"><a class="btn" href="#/review">Inizia il ripasso</a></div></div>`
+    :(next?`<div class="card dash-hero"><p class="small muted">Da fare ora</p><h2 style="margin:.15rem 0 .4rem">Prossima lezione</h2><p><b>${esc(next.title)}</b><br><span class="small muted">${esc(window.TOPICS[next.topic].label)} · ${next.mins} min</span></p><div class="thumb"><a class="btn" href="#/lesson/${next.id}">Studia ora</a></div></div>`
+    :`<div class="card dash-hero"><h2 style="margin:.15rem 0 .4rem">Sei in pari</h2><p class="muted">Nessuna carta in scadenza e le lezioni sono complete.</p><div class="thumb"><a class="btn" href="#/review">Apri i mazzi</a></div></div>`);
   app.innerHTML=`<h1>Preparazione Bending Spoons</h1>
-  <p class="muted">Allenamento per il ruolo di Software Engineer. Gli esercizi sono <b>pratica nello stile descritto</b> pubblicamente dall'azienda, non le domande reali dei test.</p>
-  <p class="small muted">Ultimo aggiornamento contenuti: ${esc(window.CONTENT_UPDATED?B.fmtDate(window.CONTENT_UPDATED):'—')}</p>
-  <div class="card"><div class="spread"><h2 style="margin:0">Prontezza alla candidatura</h2><span class="big"><b>${pct(r)}%</b> · ${label}</span></div>
+  <p class="muted m-quiet">Allenamento per il ruolo di Software Engineer. Gli esercizi sono <b>pratica nello stile descritto</b> pubblicamente dall'azienda, non le domande reali dei test.</p>
+  <p class="small muted m-quiet">Ultimo aggiornamento contenuti: ${esc(window.CONTENT_UPDATED?B.fmtDate(window.CONTENT_UPDATED):'—')}</p>
+  <div class="dash ${due?'is-due':'is-next'}">
+  ${hero}
+  <details class="m-fold dash-secondary"><summary>Il tuo stato</summary>
+  <div class="card dash-ready"><div class="spread"><h2 style="margin:0">Prontezza alla candidatura</h2><span class="big"><b>${pct(r)}%</b> · ${label}</span></div>
    <div class="meter" style="margin:.6rem 0"><i style="width:${pct(r)}%"></i></div>
    <div class="callout small">⏳ <b>Promemoria:</b> se non superi il processo, puoi ricandidarti solo dopo <b>12 mesi</b>. Conviene candidarsi quando questo indicatore è alto e i punti deboli sono coperti.</div></div>
-  <div class="grid">
-   <div class="card"><h3 style="margin-top:0">🧠 Ripasso di oggi</h3><p class="big"><b>${due}</b> carte da ripassare</p>${due?'<a class="btn" href="#/review">Inizia il ripasso</a>':'<p class="muted small">Niente in scadenza. Completa una lezione o un quiz per aggiungere carte.</p>'}</div>
-   <div class="card"><h3 style="margin-top:0">🔥 Serie</h3><p class="big"><b>${B.streakNow()}</b> ${B.streakNow()===1?"giorno":"giorni"} · record ${S.streak.best||0}</p>
+  <div class="grid dash-kpis">
+   <div class="card dash-review"><h3 style="margin-top:0">🧠 Ripasso di oggi</h3><p class="big"><b>${due}</b> carte da ripassare</p>${due?'<a class="btn" href="#/review">Inizia il ripasso</a>':'<p class="muted small">Niente in scadenza. Completa una lezione o un quiz per aggiungere carte.</p>'}</div>
+   <div class="card dash-streak"><h3 style="margin-top:0">🔥 Serie</h3><p class="big"><b>${B.streakNow()}</b> ${B.streakNow()===1?"giorno":"giorni"} · record ${S.streak.best||0}</p>
     <div class="row" style="gap:3px" aria-label="Attività ultimi 14 giorni">${days.map(([d,n])=>`<span title="${B.fmtDate(d)}: ${n} attività" style="width:16px;height:16px;border-radius:4px;background:${n?'var(--accent)':'var(--soft)'};opacity:${n?Math.min(1,.35+n/15):1}"></span>`).join('')}</div><p class="small muted">Ultimi 14 giorni</p></div>
-   <div class="card"><h3 style="margin-top:0">▶️ Prossima lezione</h3>${next?`<p><b>${esc(next.title)}</b><br><span class="small muted">${esc(window.TOPICS[next.topic].label)} · ${next.mins} min</span></p><a class="btn" href="#/lesson/${next.id}">Studia ora</a>`:'<p>Hai completato tutte le lezioni. 🎉 Ora ripassa e fai simulazioni.</p>'}</div>
-  </div>
-  <h2>Le fasi del processo</h2>
-  <div class="timeline">${STEPS.map((s,i)=>`<a href="${s[2]}"><span class="small muted">Fase ${i+1}</span><b>${s[0]}</b><span class="small muted">${s[1]}</span>${s[3]?`<div style="margin-top:.4rem">${bar(B.secProg(s[3]))}</div>`:''}</a>`).join('')}</div>
-  <h2>Progresso per sezione</h2>
-  <div class="grid">${Object.keys(window.SECTIONS).map(k=>{const p=B.secProg(k);return `<a class="card" style="text-decoration:none;color:inherit" href="#/${k}"><div class="spread"><b>${window.SECTIONS[k].icon} ${window.SECTIONS[k].label}</b><span>${pct(p)}%</span></div>${bar(p)}<ul class="small muted" style="padding-left:1rem;margin:.5rem 0 0">${B.sectionParts(k).map(x=>`<li>${x[0]}: ${pct(x[1])}%</li>`).join('')}</ul></a>`}).join('')}</div>
+   <div class="card dash-next"><h3 style="margin-top:0">▶️ Prossima lezione</h3>${next?`<p><b>${esc(next.title)}</b><br><span class="small muted">${esc(window.TOPICS[next.topic].label)} · ${next.mins} min</span></p><a class="btn" href="#/lesson/${next.id}">Studia ora</a>`:'<p class="muted">Hai completato tutte le lezioni. Ora ripassa e fai simulazioni.</p>'}</div>
+  </div></details>
+  <details class="m-fold"><summary>Le fasi del processo</summary>
+  <div class="timeline">${STEPS.map((s,i)=>`<a href="${s[2]}"><span class="small muted">Fase ${i+1}</span><b>${s[0]}</b><span class="small muted">${s[1]}</span>${s[3]?`<div style="margin-top:.4rem">${bar(B.secProg(s[3]))}</div>`:''}</a>`).join('')}</div></details>
+  <details class="m-fold"><summary>Progresso per sezione</summary>
+  <div class="grid">${Object.keys(window.SECTIONS).map(k=>{const p=B.secProg(k);return `<a class="card" style="text-decoration:none;color:inherit" href="#/${k}"><div class="spread"><b>${window.SECTIONS[k].icon} ${window.SECTIONS[k].label}</b><span>${pct(p)}%</span></div>${bar(p)}<ul class="small muted" style="padding-left:1rem;margin:.5rem 0 0">${B.sectionParts(k).map(x=>`<li>${x[0]}: ${pct(x[1])}%</li>`).join('')}</ul></a>`}).join('')}</div></details>
   ${weak.length?`<h2>⚠️ Argomenti deboli da ripassare</h2><div class="card">${weak.slice(0,6).map(w=>`<div class="spread" style="padding:.3rem 0"><span><b>${esc(window.TOPICS[w.t].label)}</b> <span class="small muted">accuratezza ${pct(w.acc)}% su ${w.n} risposte</span></span><span><a class="btn sm" href="#/lesson/${B.firstLesson(w.t)}">Rileggi la lezione</a><a class="btn sm ghost" href="${PRACTICE[w.t]}">Esercitati</a></span></div>`).join('')}</div>`:''}
-  <h2>Padronanza per argomento</h2>
+  <details class="m-fold"><summary>Padronanza per argomento</summary>
   <div class="card">${Object.keys(window.SECTIONS).map(sec=>`<h3>${window.SECTIONS[sec].icon} ${window.SECTIONS[sec].label}</h3>${Object.keys(window.TOPICS).filter(t=>window.TOPICS[t].section===sec).map(t=>{const m=B.mastery(t);return `<div style="margin:.35rem 0"><div class="spread small"><a href="#/lesson/${B.firstLesson(t)}">${esc(window.TOPICS[t].label)}</a><span class="muted">${B.mLabel(m.level)} · ${pct(m.level)}%${m.n?` (${m.n})`:''}</span></div>${bar(m.level,m.n>=3&&m.acc<.65)}</div>`}).join('')}`).join('')}
-  <p class="small muted">La padronanza combina l'accuratezza recente (verifiche delle lezioni, quiz, test, flashcard, autovalutazioni) con la quantità di pratica: servono circa 10 risposte per arrivare al massimo.</p></div>
-  <h2>Informazioni utili</h2>
+  <p class="small muted">La padronanza combina l'accuratezza recente (verifiche delle lezioni, quiz, test, flashcard, autovalutazioni) con la quantità di pratica: servono circa 10 risposte per arrivare al massimo.</p></div></details>
+  <details class="m-fold"><summary>Informazioni utili</summary>
   <div class="card small"><ul>
    <li>Valutano soprattutto il <b>potenziale di lungo periodo</b> e la <b>velocità di apprendimento</b>, più dell'esperienza attuale.</li>
    <li>Requisiti: capacità di ragionamento, drive, spirito di squadra, inglese.</li>
    <li>Nell'annuncio: <i>"Amplify your impact with AI"</i>, <i>"Simplify relentlessly"</i>, stack diversi.</li>
    <li>Retribuzione indicativa (Europa, fuori Londra): <b>66.065–107.837 €</b> tipica, fino a <b>240.330 €</b> per profili eccezionali.</li>
    <li>Se gonfi i risultati nel CV o nei colloqui, non ricevi un'offerta: il controllo referenze serve a verificarli.</li></ul>
-   <p>Fonti ufficiali: <a href="https://bndspn.com/process-document" target="_blank" rel="noopener">documento sul processo</a> · <a href="https://jobs.bendingspoons.com/positions/69c3ec6cf2164aed6ede175b" target="_blank" rel="noopener">annuncio</a> · <a href="https://bendingspoons.com/documents/Culture&amp;Policies%E2%80%94RadicalCandor.pdf" target="_blank" rel="noopener">Radical Candor</a> · <a href="https://bendingspoons.com/careers" target="_blank" rel="noopener">careers</a> (servono una connessione internet)</p></div>`};
+   <p>Fonti ufficiali: <a href="https://bndspn.com/process-document" target="_blank" rel="noopener">documento sul processo</a> · <a href="https://jobs.bendingspoons.com/positions/69c3ec6cf2164aed6ede175b" target="_blank" rel="noopener">annuncio</a> · <a href="https://bendingspoons.com/documents/Culture&amp;Policies%E2%80%94RadicalCandor.pdf" target="_blank" rel="noopener">Radical Candor</a> · <a href="https://bendingspoons.com/careers" target="_blank" rel="noopener">careers</a> (servono una connessione internet)</p></div></details>
+  </div>`};
 
 /* ---- Ripasso / flashcard ---- */
 B.ROUTES.review=function(app,args){const S=B.S;const topic=args[0];let queue;
@@ -52,14 +60,14 @@ B.ROUTES.review=function(app,args){const S=B.S;const topic=args[0];let queue;
    <div id="fc"></div>`;
   $('#deck').addEventListener('change',e=>B.go('#/review'+(e.target.value?'/'+e.target.value:'')));
   const box=$('#fc');
-  function show(){if(i>=queue.length){box.innerHTML=`<div class="card"><h2>✅ Fatto!</h2><p>${done?`Hai ripassato ${done} carte.`:'Nessuna carta in scadenza.'} ${B.dueCards().length?`Restano ${B.dueCards().length} carte per oggi.`:''}</p><p class="small muted">Per aggiungere carte: completa le lezioni (i concetti chiave entrano nel ripasso) oppure apri un mazzo per argomento.</p><a class="btn" href="#/course">Vai al corso</a> <a class="btn ghost" href="#/home">Home</a></div>`;B.toast&&done&&B.toast('Ripasso completato');return}
+  function show(){B.clearDock();if(i>=queue.length){box.innerHTML=`<div class="card"><h2>✅ ${done?'Fatto!':'Niente in scadenza'}</h2><p>${done?`Hai ripassato ${done} carte.`:'Nessuna carta in scadenza. Completa una lezione o scegli un mazzo qui sopra.'} ${B.dueCards().length?`Restano ${B.dueCards().length} carte per oggi.`:''}</p><div class="row thumb"><a class="btn" href="#/course">Vai al corso</a><a class="btn ghost" href="#/home">Home</a></div></div>`;if(done)B.toast('Ripasso completato');return}
     const id=queue[i],c=B.CARDS[id],st=S.srs[id];
     box.innerHTML=`<div class="spread small muted" style="margin-top:1rem"><span>Carta ${i+1} di ${queue.length} · ${esc(window.TOPICS[c.topic].label)}</span><span>${st?`Intervallo ${st.int} gg · facilità ${st.ef.toFixed(2)}`:'<span class="tag">nuova</span>'}</span></div>
-     <div class="card flash" id="face" tabindex="0" role="button" aria-label="Gira la carta"><div>${c.front}<div class="small muted" style="margin-top:.8rem">Tocca per vedere la risposta</div></div></div>
-     <div id="rate" style="display:none"><div class="row"><button class="btn danger" data-q="1">Ancora</button><button class="btn ghost" data-q="3">Difficile</button><button class="btn" data-q="4">Bene</button><button class="btn" data-q="5" style="background:var(--ok);border-color:var(--ok)">Facile</button></div>${c.lesson?`<p class="small"><a href="#/lesson/${c.lesson}">📖 Apri la lezione</a></p>`:''}</div>`;
-    const face=$('#face');const flip=()=>{face.innerHTML=`<div><div class="small muted">${c.front}</div><hr style="border:0;border-top:1px solid var(--border);margin:.8rem 0">${c.back}</div>`;$('#rate').style.display='block';face.style.cursor='default'};
+     <div class="card flash" id="face" tabindex="0" role="button" aria-label="Mostra la risposta"><div>${c.front}<div class="small muted" style="margin-top:.8rem">Tocca per vedere la risposta</div></div></div>
+     <div id="rate" style="display:none"><div class="row thumb" role="group" aria-label="Valutazione"><button class="btn danger" data-q="1">Ancora</button><button class="btn ghost" data-q="3">Difficile</button><button class="btn" data-q="4">Bene</button><button class="btn" data-q="5" style="background:var(--ok);border-color:var(--ok)">Facile</button></div>${c.lesson?`<p class="small"><a href="#/lesson/${c.lesson}">📖 Apri la lezione</a></p>`:''}</div>`;
+    const face=$('#face');const flip=()=>{face.innerHTML=`<div><div class="small muted">${c.front}</div><hr style="border:0;border-top:1px solid var(--border);margin:.8rem 0">${c.back}</div>`;$('#rate').style.display='block';face.style.cursor='default';face.setAttribute('aria-label','Risposta')};
     face.addEventListener('click',flip,{once:true});face.addEventListener('keydown',e=>{if(e.key===' '||e.key==='Enter'){e.preventDefault();flip()}});
-    $$('#rate [data-q]').forEach(b=>b.addEventListener('click',()=>{const q=+b.dataset.q;B.srsGrade(id,q);done++;if(q<3)queue.push(id);i++;show()}))}
+    $$('#rate [data-q]').forEach(b=>b.addEventListener('click',()=>{const q=+b.dataset.q;B.srsGrade(id,q);B.toast(q>=4?'Valutazione salvata':'La rivedrai presto');done++;if(q<3)queue.push(id);i++;show()}))}
   show()};
 
 /* ---- Corso ---- */
@@ -82,8 +90,8 @@ B.ROUTES.lesson=function(app,args){const S=B.S;const L=window.LESSONS,idx=L.find
     B.renderMCQ(d,(()=>{const q=B.checkItem(c);q.q=`<div class="small muted">Domanda ${k+1} di ${checks.length}</div>`+q.q;return q})(),ok=>{answered++;if(ok)correct++;B.record(l.topic,ok?1:0);if(answered===checks.length)finish()})});
   function finish(){const score=checks.length?correct/checks.length:1;const passed=score>=.6;
     if(passed){const prevDone=st&&st.done;S.lessons[l.id]={done:true,score:Math.max(score,(st&&st.score)||0),date:B.today()};let added=0;(l.cards||[]).forEach((_,i)=>{if(B.srsAdd('L:'+l.id+':'+i))added++});B.save();B.touch();
-      $('#result').innerHTML=`<div class="card" style="border-color:var(--ok)"><h3 style="margin-top:0">🎉 Lezione completata: ${correct}/${checks.length}</h3><p>${added?`${added} concetti aggiunti al ripasso di oggi.`:prevDone?'Risultato aggiornato.':''}</p><div class="row">${next?`<a class="btn" href="#/lesson/${next.id}">Lezione successiva</a>`:''}<a class="btn ghost" href="${PRACTICE[l.topic]}">Esercitati su questo argomento</a><a class="btn ghost" href="#/review">Ripasso</a></div></div>`}
-    else{B.save();$('#result').innerHTML=`<div class="card" style="border-color:var(--warn)"><h3 style="margin-top:0">${correct}/${checks.length}: ripassa e riprova</h3><p>Serve almeno il 60% per completare la lezione. Rileggi le parti che non erano chiare e rifai la verifica.</p><button class="btn" id="retry">Rifai la verifica</button></div>`;$('#retry').addEventListener('click',()=>B.route())}
+      $('#result').innerHTML=`<div class="card" style="border-color:var(--ok)"><h3 style="margin-top:0">🎉 Lezione completata: ${correct}/${checks.length}</h3><p>${added?`${added} concetti aggiunti al ripasso di oggi.`:prevDone?'Risultato aggiornato.':''}</p><div class="row thumb">${next?`<a class="btn" href="#/lesson/${next.id}">Lezione successiva</a>`:''}<a class="btn ghost" href="${PRACTICE[l.topic]}">Esercitati</a><a class="btn ghost" href="#/review">Ripasso</a></div></div>`;B.toast('Progresso salvato')}
+    else{B.save();$('#result').innerHTML=`<div class="card" style="border-color:var(--warn)"><h3 style="margin-top:0">${correct}/${checks.length}: ripassa e riprova</h3><p>Serve almeno il 60% per completare la lezione. Rileggi le parti che non erano chiare e rifai la verifica.</p><div class="thumb"><button class="btn" id="retry">Rifai la verifica</button></div></div>`;$('#retry').addEventListener('click',()=>B.route())}
     $('#result').scrollIntoView({behavior:'smooth',block:'center'})}
   if(!checks.length)finish()};
 

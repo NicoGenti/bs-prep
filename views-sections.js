@@ -69,16 +69,16 @@ function psRun(box,cfg){const keys=Object.keys(window.GEN);const qs=[];for(let i
   const res=[];let i=0,finished=false,start=Date.now();
   box.innerHTML=`<div class="card"><div class="spread"><span>Domanda <b id="qi">1</b> / ${cfg.n} · corrette <b id="qc">0</b></span><span class="timer" id="tm"></span></div>${bar(0)}</div><div class="card" id="qb"></div>`;
   const timer=B.countdown($('#tm'),cfg.n*cfg.sec,()=>end(true));
-  function show(){if(i>=qs.length)return end(false);$('#qi').textContent=i+1;$('.bar>i',box).style.width=pct(i/cfg.n)+'%';timer.paused=false;const q=qs[i];
+  function show(){B.clearDock();if(i>=qs.length)return end(false);$('#qi').textContent=i+1;$('.bar>i',box).style.width=pct(i/cfg.n)+'%';timer.paused=false;const q=qs[i];
     B.renderMCQ($('#qb'),Object.assign({},q,{q:`<div class="small muted">${esc(GL[q.topic]||q.topic)}</div>`+q.q}),(ok,ch)=>{res[i]={ok,ch};B.record(q.topic,ok?1:0);$('#qc').textContent=res.filter(r=>r&&r.ok).length;
-      if(cfg.mode==='train'){timer.paused=true;const nb=document.createElement('button');nb.className='btn';nb.textContent=i<qs.length-1?'Avanti →':'Vedi risultato';nb.addEventListener('click',()=>{i++;show()});$('#qb .after').appendChild(nb);nb.focus()}
+      if(cfg.mode==='train'){timer.paused=true;const nb=document.createElement('button');nb.className='btn thumb';nb.textContent=i<qs.length-1?'Avanti →':'Vedi risultato';nb.addEventListener('click',()=>{i++;show()});$('#qb .after').appendChild(nb);nb.focus();B.toast(ok?'Risposta salvata':'Risposta registrata')}
       else setTimeout(()=>{i++;show()},250)},{hide:cfg.mode==='exam'})}
   function end(timeout){if(finished)return;finished=true;timer.stop();const correct=res.filter(r=>r&&r.ok).length;const secs=Math.round((Date.now()-start)/1000);
     B.S.psHistory.push({date:new Date().toISOString(),type:cfg.type,n:cfg.n,correct,secs,mode:cfg.mode,timeout});if(B.S.psHistory.length>200)B.S.psHistory.shift();B.touch();B.save();
     const byT={};qs.forEach((q,k)=>{const t=byT[q.topic]||(byT[q.topic]=[0,0]);t[1]++;if(res[k]&&res[k].ok)t[0]++});
     box.innerHTML=`<div class="card"><h2 style="margin-top:0">${timeout?'⏰ Tempo scaduto! ':''}Risultato: ${correct}/${cfg.n} (${pct(correct/cfg.n)}%)</h2><p class="muted">Tempo usato: ${Math.floor(secs/60)}:${String(secs%60).padStart(2,'0')} · ${cfg.mode==='exam'?'simulazione':'allenamento'}</p>
      <div class="kpi">${Object.keys(byT).map(t=>`<div><div class="small">${esc(GL[t]||t)}: ${byT[t][0]}/${byT[t][1]}</div>${bar(byT[t][0]/byT[t][1],byT[t][0]/byT[t][1]<.6)}</div>`).join('')}</div>
-     <div class="row" style="margin-top:.8rem"><button class="btn" id="again">Nuovo test</button><a class="btn ghost" href="#/ps/storico">Storico</a></div></div>
+     <div class="row thumb" style="margin-top:.8rem"><button class="btn" id="again">Nuovo test</button><a class="btn ghost" href="#/ps/storico">Storico</a></div></div>
      <h3>Revisione</h3>${qs.map((q,k)=>{const r=res[k];return `<details class="card"><summary>${r?(r.ok?'✅':'❌'):'⏭️'} Domanda ${k+1} · ${esc(GL[q.topic]||q.topic)}</summary><div class="qtext">${q.q}</div><p><b>Risposta corretta:</b></p><div class="${q.svg?'mopts':''}">${q.svg?`<button disabled class="ok">${q.opts[q.ans]}</button>`:esc(q.opts[q.ans].replace(/<[^>]+>/g,''))}</div>${r&&!r.ok?`<p class="small">La tua risposta: ${q.svg?'figura '+(r.ch+1):esc(String(q.opts[r.ch]).replace(/<[^>]+>/g,''))}</p>`:''}<div class="expl">${q.expl}</div><p class="small"><a href="#/lesson/${B.firstLesson(q.topic)}">📖 Lezione</a></p></details>`}).join('')}`;
     $('#again').addEventListener('click',()=>psSetup(box))}
   show()}
@@ -108,13 +108,13 @@ function quizRun(box,t,n){const S=B.S;const all=window.QUIZ[t].map((_,i)=>i);
   // priorità alle domande in scadenza o mai viste, poi le altre
   const td=B.today();const pri=all.filter(i=>{const s=S.srs['Q:'+t+':'+i];return !s||s.due<=td});const rest=all.filter(i=>!pri.includes(i));
   const order=[...B.shuffle(pri),...B.shuffle(rest)].slice(0,Math.min(n,all.length));let k=0,correct=0;const wrong=[];
-  function show(){if(k>=order.length)return end();const q=B.quizItem(t,order[k]);const c=document.createElement('div');
+  function show(){B.clearDock();if(k>=order.length)return end();const q=B.quizItem(t,order[k]);const c=document.createElement('div');
     box.innerHTML=`<div class="card"><div class="spread"><b>${esc(T[t].label)}</b><span>${k+1}/${order.length} · ✅ ${correct}</span></div>${bar(k/order.length)}</div>`;c.className='card';box.appendChild(c);
     B.renderMCQ(c,q,ok=>{const id=q.cid;if(ok)correct++;else wrong.push(order[k]);B.record(t,ok?1:0);
       if(!S.srs[id])B.srsAdd(id,ok?(()=>{const d=new Date();d.setDate(d.getDate()+1);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')})():td);else if(!ok){S.srs[id].due=td;S.srs[id].reps=0}B.save();
-      const nb=document.createElement('button');nb.className='btn';nb.textContent=k<order.length-1?'Avanti →':'Risultato';nb.addEventListener('click',()=>{k++;show()});$('.after',c).appendChild(nb);nb.focus()})}
+      const nb=document.createElement('button');nb.className='btn thumb';nb.textContent=k<order.length-1?'Avanti →':'Risultato';nb.addEventListener('click',()=>{k++;show()});$('.after',c).appendChild(nb);nb.focus();B.toast(ok?'Risposta salvata':'Da ripassare, salvato')})}
   function end(){S.quizHistory.push({date:new Date().toISOString(),topic:t,n:order.length,correct});B.save();
-    box.innerHTML=`<div class="card"><h2 style="margin-top:0">${esc(T[t].label)}: ${correct}/${order.length} (${pct(correct/order.length)}%)</h2><p class="muted small">Le domande sbagliate sono già nel ripasso di oggi.</p><div class="row"><button class="btn" id="again">Altro quiz</button><a class="btn ghost" href="#/lesson/${B.firstLesson(t)}">📖 Lezione</a><a class="btn ghost" href="#/review">Ripasso</a></div></div>${wrong.length?'<h3>Da rivedere</h3>'+wrong.map(i=>{const r=window.QUIZ[t][i];return `<div class="card"><b>${esc(r[0])}</b><div class="expl"><b>${esc(r[1][r[2]])}</b> — ${esc(r[3])}</div></div>`}).join(''):''}`;
+    box.innerHTML=`<div class="card"><h2 style="margin-top:0">${esc(T[t].label)}: ${correct}/${order.length} (${pct(correct/order.length)}%)</h2><p class="muted small">Le domande sbagliate sono già nel ripasso di oggi.</p><div class="row thumb"><button class="btn" id="again">Altro quiz</button><a class="btn ghost" href="#/lesson/${B.firstLesson(t)}">📖 Lezione</a><a class="btn ghost" href="#/review">Ripasso</a></div></div>${wrong.length?'<h3>Da rivedere</h3>'+wrong.map(i=>{const r=window.QUIZ[t][i];return `<div class="card"><b>${esc(r[0])}</b><div class="expl"><b>${esc(r[1][r[2]])}</b> — ${esc(r[3])}</div></div>`}).join(''):''}`;
     $('#again').addEventListener('click',()=>quizSetup(box))}
   show()}
 function pyEx(box){const D=B.S.pyDone;box.innerHTML=`<div class="callout small">Il sito è offline e non esegue Python. Scrivi la soluzione qui (viene salvata), poi provala sul tuo PC: <code>python3 esercizio.py</code>. Confrontala con la soluzione di riferimento solo dopo averci provato davvero.</div>
@@ -237,12 +237,13 @@ function enExerciseOne(box,ex,all){const S=B.S;const idx=all.findIndex(e=>e.id==
     return;
   }
   body.innerHTML=`<label for="en_try">La tua versione</label><textarea id="en_try" data-bind="enx_${ex.id}" spellcheck="true">${B.tval('enx_'+ex.id)}</textarea>
-    <button class="btn" id="en_show">Mostra la risposta modello</button><div id="en_model"></div>`;
+    <div class="thumb" id="en_show_bar"><button class="btn" id="en_show">Mostra la risposta modello</button></div><div id="en_model"></div>`;
   $('#en_show').addEventListener('click',()=>{
+    const bar=$('#en_show_bar');if(bar)bar.remove();
     $('#en_model').innerHTML=`<div class="expl"><b>Risposta modello</b><div style="margin-top:.35rem">${esc(ex.answer).replace(/\n/g,'<br>')}</div></div>
       <p>${esc(ex.explanation)}</p>
       <p class="small muted">Quanto ci sei andato vicino? Il voto aggiorna il ripasso spaziato di questa frase.</p>
-      <div class="row rating"><button class="btn danger" data-q="1">Ancora</button><button class="btn ghost" data-q="3">Difficile</button><button class="btn" data-q="4">Bene</button><button class="btn" data-q="5" style="background:var(--ok);border-color:var(--ok)">Facile</button></div>`;
+      <div class="row rating thumb"><button class="btn danger" data-q="1">Ancora</button><button class="btn ghost" data-q="3">Difficile</button><button class="btn" data-q="4">Bene</button><button class="btn" data-q="5" style="background:var(--ok);border-color:var(--ok)">Facile</button></div>`;
     $$('#en_model [data-q]').forEach(b=>b.addEventListener('click',()=>{const q=+b.dataset.q;S.enDone[ex.id]=q>=3;B.srsGrade('EX:'+ex.id,q);B.toast(q>=3?'Registrato nel ripasso':'Lo rivedrai presto');$$('#en_model [data-q]').forEach(x=>x.disabled=true)}));
   });
 }
@@ -262,7 +263,7 @@ function enSpeak(box,id){const S=B.S;const all=window.EN_SPEAK||[];
     <textarea id="sp_try" data-bind="ens_${s.id}">${B.tval('ens_'+s.id)}</textarea>
     <details class="card"><summary>Mostra la risposta modello</summary><div class="copybox" id="sp_sample" style="margin-top:.6rem"></div><p>${esc(s.notes)}</p></details>
     <p class="small muted">Dopo aver risposto ad alta voce, valuta quanto la tua risposta copriva struttura, contributo personale e risultato.</p>
-    <div class="row rating"><button class="btn danger" data-q="1">Ancora</button><button class="btn ghost" data-q="3">Difficile</button><button class="btn" data-q="4">Bene</button><button class="btn" data-q="5" style="background:var(--ok);border-color:var(--ok)">Facile</button></div></div>
+    <div class="row rating thumb"><button class="btn danger" data-q="1">Ancora</button><button class="btn ghost" data-q="3">Difficile</button><button class="btn" data-q="4">Bene</button><button class="btn" data-q="5" style="background:var(--ok);border-color:var(--ok)">Facile</button></div></div>
     <div class="spread" style="margin-top:.8rem">${prev?`<a class="btn ghost" href="#/en/speaking/${prev.id}">← Precedente</a>`:'<span></span>'}${next?`<a class="btn ghost" href="#/en/speaking/${next.id}">Successiva →</a>`:''}</div>`;
   $('#sp_sample').textContent=s.sample;
   $('#sp_q').addEventListener('click',()=>speakEn(s.question));
