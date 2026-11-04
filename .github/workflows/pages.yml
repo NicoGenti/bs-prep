@@ -36,6 +36,7 @@ jobs:
             data-lessons.js data-quiz.js data-english.js content-meta.js \
             manifest.webmanifest icon.svg apple-touch-icon.png icon-192.png icon-512.png \
             icon-192-maskable.png icon-512-maskable.png _site/
+          cp -r assets _site/
 
       - name: Carica l'artifact
         uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0

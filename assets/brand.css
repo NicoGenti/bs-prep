@@ -1,0 +1,15 @@
+/* brand.css — bs-prep. Generato da web-brand/make-brand.py (accento #4f46e5). Strato 2 di 3. */
+:root {
+  --ui-accent: #6058e8;
+  --ui-accent-ink: #ffffff;
+  --ui-accent-soft: #dcdaf5;
+  --ui-accent-text: #4f46e5;
+  --ui-focus: #4f46e5;
+}
+:root[data-theme="dark"] {
+  --ui-accent: #827ced;
+  --ui-accent-ink: #08062d;
+  --ui-accent-soft: #31324a;
+  --ui-accent-text: #9792f0;
+  --ui-focus: #827ced;
+}

@@ -1,0 +1,108 @@
+/* web-kit · tema "Petalo" · tokens.css
+   Implementa il contratto --ui-* (vedi references/token-contract.md).
+   Strato 1 di 3: tema → brand.css (solo colori brand + font) → app.css (usa, non definisce).
+   Riadattamento originale: valori misurati dall'analisi UX, nessun asset proprietario. */
+:root {
+  /* ---------- Colore: superfici e testo ---------- */
+  --ui-bg: #f2f0ec;            /* carta calda */
+  --ui-surface: #fbfaf8;       /* card, dialog */
+  --ui-surface-2: #f4f2ee;     /* testate tabelle, pannelli interni */
+  --ui-well: #28201a0e;        /* inset traslucido: hover, track */
+  --ui-ink: #1d1a18;
+  --ui-ink-muted: #5f5853;
+  --ui-ink-faint: #8f8780;     /* solo decorativo (3.4:1) */
+  --ui-line: #28201a16;
+  --ui-line-strong: #28201a26;
+
+  /* ---------- Colore: accento (corallo) ---------- */
+  --ui-accent: #ff7a59;
+  --ui-accent-ink: #2a0d05;    /* testo SU accento: mai bianco (7:1) */
+  --ui-accent-text: #b2391c;   /* accento usato come testo/link (5.8:1) */
+  --ui-accent-soft: #ffe3d9;
+  --ui-focus: #e5562f;         /* anello di focus, hover del bottone accento */
+
+  /* ---------- Colore: stato (testo / riempimento) ---------- */
+  --ui-success: #1b6b44; --ui-success-fill: #4dbf88;
+  --ui-warning: #835000; --ui-warning-fill: #efb23d;
+  --ui-danger:  #b3241a; --ui-danger-fill:  #ef6a5d;
+  --ui-info:    #1c5996; --ui-info-fill:    #6aa6e3;
+  --ui-danger-solid: #c2382c; --ui-on-danger-solid: #ffffff;
+
+  /* ---------- Navigazione scura (resta scura in entrambi i temi) ---------- */
+  --ui-nav-bg: #1e2221; --ui-nav-bg-2: #262b29;
+  --ui-nav-ink: #eef0ee; --ui-nav-muted: #a7afab; --ui-nav-line: #ffffff14;
+
+  /* ---------- Tile KPI (pastello + inchiostro profondo, AAA) ---------- */
+  --ui-tile-1: #ffe0d4; --ui-on-tile-1: #4b1607;
+  --ui-tile-2: #fbecc6; --ui-on-tile-2: #463200;
+  --ui-tile-3: #dcebfa; --ui-on-tile-3: #0e2e50;
+  --ui-tile-4: #d8f1e3; --ui-on-tile-4: #0d3a23;
+
+  /* ---------- Forma ed elevazione ---------- */
+  --ui-radius-sm: 10px;  /* controlli piccoli, chip */
+  --ui-radius-md: 14px;  /* input, bottoni, tile */
+  --ui-radius-lg: 20px;  /* card */
+  --ui-radius-xl: 24px;  /* shell, hero */
+  --ui-radius-pill: 999px;
+  --ui-shadow-1: 0 1px 2px #28201a0d, 0 4px 12px -8px #28201a33;
+  --ui-shadow-2: 0 1px 2px #28201a0d, 0 12px 32px -20px #28201a47;
+  --ui-shadow-3: 0 2px 6px #28201a14, 0 30px 60px -24px #28201a61;
+  --ui-shadow-accent: 0 8px 18px -10px color-mix(in srgb, var(--ui-focus) 80%, transparent), inset 0 1px #ffffff4d;
+
+  /* ---------- Tipografia ---------- */
+  --ui-font-body: "Urbanist Variable", "Urbanist", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --ui-font-display: var(--ui-font-body);
+  --ui-font-mono: ui-monospace, "SFMono-Regular", "JetBrains Mono", Menlo, Consolas, monospace;
+  --ui-text-xs: 12px;
+  --ui-text-sm: 13px;
+  --ui-text-base: 14px;
+  --ui-text-lg: 16px;
+  --ui-text-xl: 20px;
+  --ui-text-2xl: 26px;
+  --ui-text-3xl: clamp(30px, 3.4vw, 48px);
+  --ui-leading-tight: 1.08;
+  --ui-leading-body: 1.5;
+  --ui-tracking-display: -0.025em;
+  --ui-weight-regular: 500; --ui-weight-strong: 650; --ui-weight-display: 750;
+
+  /* ---------- Spaziatura e densità ---------- */
+  --ui-density: 0;            /* 0 comodo · -1 compatto · -2 denso (gestionali) */
+  --ui-space-1: 4px;  --ui-space-2: 8px;  --ui-space-3: 12px; --ui-space-4: 16px;
+  --ui-space-5: 20px; --ui-space-6: 24px; --ui-space-7: 32px; --ui-space-8: 40px;
+  --ui-space-9: 56px; --ui-space-10: 80px;
+  --ui-control-h: calc(44px + var(--ui-density) * 4px);  /* target ≥ 44 px a densità 0 */
+  --ui-content-max: 1200px;
+  --ui-gutter: clamp(16px, 2.4vw, 32px);
+
+  /* ---------- Motion (sempre via dur()/classi; 0 con reduced-motion) ---------- */
+  --ui-dur-fast: 160ms;
+  --ui-dur-base: 260ms;
+  --ui-dur-slow: 400ms;
+  --ui-ease-out: cubic-bezier(.165, .84, .44, 1);     /* ~ GSAP power3.out */
+  --ui-ease-in-out: cubic-bezier(.645, .045, .355, 1);/* ~ power2.inOut */
+  --ui-ease-spring: cubic-bezier(.3, 1.5, .5, 1);     /* knob, pop */
+  --ui-ease-expo: cubic-bezier(.19, 1, .22, 1);       /* entrate "land" */
+
+  color-scheme: light;
+}
+
+:root[data-theme="dark"] {
+  --ui-bg: #121413; --ui-surface: #1a1d1c; --ui-surface-2: #212524; --ui-well: #e6f0eb0f;
+  --ui-ink: #f2f1ed; --ui-ink-muted: #aeb3b0; --ui-ink-faint: #7c827f;
+  --ui-line: #ffffff13; --ui-line-strong: #ffffff24;
+  --ui-accent: #ff8a6b; --ui-accent-ink: #2a0d05; --ui-accent-text: #ffa68c;
+  --ui-accent-soft: #3d241c; --ui-focus: #ff9b80;
+  --ui-success: #72d6a2; --ui-success-fill: #46b47e;
+  --ui-warning: #f3c769; --ui-warning-fill: #d9a43a;
+  --ui-danger: #ff9b90;  --ui-danger-fill: #e5675a;
+  --ui-info: #93c3f3;    --ui-info-fill: #5f9bd6;
+  --ui-nav-bg: #191c1b; --ui-nav-bg-2: #222625; --ui-nav-line: #ffffff12;
+  --ui-tile-1: #47291f; --ui-on-tile-1: #ffe7de;
+  --ui-tile-2: #43381c; --ui-on-tile-2: #fbf0d3;
+  --ui-tile-3: #1f3448; --ui-on-tile-3: #e2effc;
+  --ui-tile-4: #1f3a2c; --ui-on-tile-4: #dff4e8;
+  --ui-shadow-1: 0 1px 2px #00000059, 0 4px 12px -8px #0009;
+  --ui-shadow-2: 0 1px 2px #00000059, 0 16px 36px -22px #000c;
+  --ui-shadow-3: 0 2px 6px #0006, 0 30px 60px -24px #000000d9;
+  color-scheme: dark;
+}
