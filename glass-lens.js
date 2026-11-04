@@ -10,13 +10,21 @@
    vanilla port — not a verbatim TypeScript copy. No upstream source is vendored.
    Full license text and obligations: docs/third-party-notices.md.
 
-   CONTRACT: classic script (no modules, no build step). Loading this file is
-   side-effect-free: it registers no listeners, mutates no DOM node, and never
-   auto-initialises. It only publishes window.BSLens.
+   CONTRACT: classic script (no modules, no build step). It publishes
+   window.BSLens and, once the document is interactive, bootstraps itself.
 
    P-1 scope: the engine core — token config, displacement map, rim map, filter
-   builder and lens geometry. Nothing is mounted and no node is inserted yet;
-   P-2 adds the generated backdrop, the defs container and the lifecycle.
+   builder and lens geometry.
+   P-2 scope: the mount layer. Each approved surface (`.topbar`, and the mobile
+   `.tabbar` when it is displayed) gets the lens where it already has its frost:
+   the filter is published as `--lg-filter` and consumed by one declaration per
+   surface in styles.css / mobile-glass.css, so the REAL page content scrolling
+   under the glass is what bends. No backdrop copy, no covering element and no
+   per-frame loop — the browser refilters on its own as the backdrop changes.
+   The rim is painted inline over the surface's own background, and every gate
+   (support, reduced motion, reduced transparency) and the theme repaint live
+   here.
+
    The `_internals` view on the published object is a test seam for the P-3
    sandbox suite, not part of the public contract. */
 (function (root) {
@@ -56,14 +64,17 @@
     repaints: 0,
     maps: 0,
     filters: 0,
+    backdrops: 0,
     rims: 0,
     skipped: 0,
     errors: 0
   };
 
-  /* Feature detection only — no UA sniffing, no DOM writes. Returns false
-     (never throws) when SVG, a 2d canvas context, or CSS filter url()
-     support is missing, including in DOM-less sandboxes (node vm). */
+  /* Feature detection only — no DOM writes. Returns false (never throws) when
+     SVG, a 2d canvas context, or CSS filter url() support is missing,
+     including in DOM-less sandboxes (node vm). `isWebKit` below is the one
+     place this engine reads the UA, and it is a capability split, not a
+     feature test. */
   function isSupported() {
     var supported = (typeof SVGElement !== 'undefined') &&
       (function () {
@@ -91,6 +102,46 @@
     } catch (err) {
       return false;
     }
+  }
+
+  /* ---- engine split ------------------------------------------------------ */
+
+  /* The one UA read in this file, and it exists because upstream's does:
+     lens.ts:289-291 (`boxUnits`) draws exactly this line. WebKit — Safari,
+     and every browser on iOS, which are all WebKit underneath — puts an SVG
+     filter on HTML in bounding-box units and paints none of its output
+     outside the element (lens.ts:28-34), so a bend built in px would land at
+     the wrong scale and clipped. There the glass keeps its frost and paints
+     its rim, and does not bend; Chromium (and, untested here, Gecko) take the
+     filter. Chromium is excluded from the WebKit branch by its own token, as
+     upstream does, so Blink keeps the bend. Everything else in this engine is
+     a feature check. */
+  function isWebKit() {
+    try {
+      var browser = root.navigator;
+      var agent = browser && browser.userAgent ? String(browser.userAgent) : '';
+      return /AppleWebKit\//.test(agent) && !/Chrom(?:e|ium)\//.test(agent);
+    } catch (err) {
+      return false;
+    }
+  }
+
+  /* Whether this engine can bend its own backdrop: the platform must accept a
+     filter reference inside `backdrop-filter`, and it must not be WebKit. Any
+     throw, or a missing CSS.supports, reads as "no bend" — the rim still
+     paints, because the rim needs no filter. */
+  function backdropCapable() {
+    var capable = false;
+    try {
+      var css = root.CSS;
+      capable = !!(css && typeof css.supports === 'function' &&
+        (css.supports('backdrop-filter', 'url(#lg-probe)') ||
+          css.supports('-webkit-backdrop-filter', 'url(#lg-probe)')));
+    } catch (err) {
+      _diagnostics.errors += 1;
+      capable = false;
+    }
+    return capable && !isWebKit();
   }
 
   /* ---- plumbing ---------------------------------------------------------- */
@@ -651,9 +702,11 @@
 
   /* Geometry for one lens, with no DOM writes: the backdrop is the lens's
      viewport rect grown by the rim margin, and the filter's map box is the
-     lens rect in the backdrop's own coordinates. The P-2 mount layer
-     positions the backdrop from `box`, then hands `region` and `mapBox` to
-     buildSvgFilter. Returns null when either box is not measurable. */
+     lens rect in the backdrop's own coordinates. Kept from P-1 as the
+     geometry contract for a dedicated backdrop; the live-backdrop mount
+     landed in P-2 needs no such box (the filter is drawn over the surface
+     itself), so nothing in the mount layer calls this. Returns null when the
+     lens is not measurable. */
   function mountLens(glassEl, backdropEl) {
     var shape = track(glassEl);
     if (!shape) {
@@ -694,93 +747,583 @@
     };
   }
 
-  /* Lenses the loop drives. P-2 pushes on mount and splices on unmount. */
-  var mountedLenses = [];
-  var frameHandle = 0;
-  var following = false;
+  /* ---- attached surfaces (P-2) ------------------------------------------- */
+
+  /* P-2 design delta, USER-APPROVED: there is no follow loop any more. P-1
+     drove one rAF that re-read every lens's rect and rebuilt its filter; with
+     the lens living on the surface's own `backdrop-filter` the browser
+     refilters the backdrop by itself whenever the content under it changes,
+     so nothing here needs a frame. `follow()` and `stopFollow()` stay for the
+     published contract and are event-driven no-ops: `follow()` reports
+     whether anything is attached. `_diagnostics.frames` staying at 0 in
+     steady state is the evidence that no frame loop is running, not a bug. */
+
+  var STYLE_ID = 'bslens-styles';
+  var DEFS_ID = 'lg-defs';
+  var SURFACE_SELECTORS = ['.topbar', '.tabbar'];
+  var BACKDROP_CACHE_LIMIT = 8;
+  var BATCH_FALLBACK_MS = 32;
+
+  /* Prepended to <head> while mounted: the four token defaults and the
+     surface hook, and nothing else. No background, no blur, no saturate, no
+     `--ui-*`, no `!important` — the frost stays the app's declaration, and
+     the rim is painted inline (see applyRim for why it cannot be a rule). */
+  var STYLE_TEXT = ':root{--lg-bend:.30;--lg-dispersion:.25;--lg-rim-shine:.30;--lg-rim-shine-outer:.13}' +
+    '.topbar,.tabbar{--lg-rim:none}';
+
+  var records = [];
+  var started = false;
+  var eventsBound = false;
+  var boundEvents = [];
+  var mediaWatches = [];
+  var styleEl = null;
+  var defsEl = null;
+  var defsContainer = null;
+  var themeObserver = null;
+  var idleHandle = 0;
+  var idleMode = '';
+  var backdropSerial = 0;
+  var backdrops = new Map();
 
   function pageHidden() {
     var doc = documentRef();
     return !!(doc && doc.visibilityState && doc.visibilityState !== 'visible');
   }
 
-  function requestFrame() {
-    var schedule = root.requestAnimationFrame;
-    if (typeof schedule !== 'function') return 0;
+  function listen(target, type, handler) {
+    if (!target || typeof target.addEventListener !== 'function') return false;
     try {
-      return schedule.call(root, frame);
+      target.addEventListener(type, handler, false);
+      return true;
     } catch (err) {
-      return 0;
+      _diagnostics.errors += 1;
+      return false;
     }
   }
 
-  function frame() {
-    frameHandle = 0;
-    if (!following) return;
-    if (pageHidden()) {
-      following = false;
-      return;
-    }
-    _diagnostics.frames += 1;
-    for (var i = 0; i < mountedLenses.length; i++) {
-      var lens = mountedLenses[i];
-      if (lens && typeof lens.update === 'function') {
-        try {
-          lens.update();
-        } catch (err) {
-          _diagnostics.errors += 1;
-        }
-      }
-    }
-    frameHandle = requestFrame();
+  function bind(target, type, handler) {
+    if (listen(target, type, handler)) boundEvents.push({ target: target, type: type, handler: handler });
   }
 
-  /* One rAF loop for every mounted lens. Idempotent: calling it while the
-     loop runs changes nothing. It refuses to start while nothing is mounted
-     (P-2 starts it on the first mount) and pauses while the page is hidden;
-     the P-2 lifecycle calls it again when the page becomes visible. */
-  function follow() {
-    if (following) return true;
-    if (!mountedLenses.length) return false;
-    if (pageHidden()) return false;
-    following = true;
-    frameHandle = requestFrame();
+  /* A media query watched for as long as the engine lives, with the old
+     addListener form for engines that predate addEventListener('change'). */
+  function watch(query, handler) {
+    if (typeof root.matchMedia !== 'function') return null;
+    var media;
+    try {
+      media = root.matchMedia(query);
+    } catch (err) {
+      return null;
+    }
+    if (!media) return null;
+    try {
+      if (typeof media.addEventListener === 'function') media.addEventListener('change', handler);
+      else if (typeof media.addListener === 'function') media.addListener(handler);
+      else return null;
+    } catch (err) {
+      return null;
+    }
+    mediaWatches.push({ media: media, handler: handler });
+    return media;
+  }
+
+  /* Both gates, live: the plan's reduced-motion and reduced-transparency
+     queries each mount/unmount on toggle. */
+  function watchGates() {
+    watch('(prefers-reduced-motion: reduce)', applyGate);
+    watch('(prefers-reduced-transparency: reduce)', applyGate);
+  }
+
+  function gated() {
+    return !isEnabled();
+  }
+
+  function darkNow() {
+    var doc = documentRef();
+    var element = doc && doc.documentElement;
+    var theme = element && typeof element.getAttribute === 'function'
+      ? element.getAttribute('data-theme')
+      : null;
+    if (theme === 'dark') return true;
+    if (theme === 'light') return false;
+    try {
+      return !!(root.matchMedia && root.matchMedia('(prefers-color-scheme: dark)').matches);
+    } catch (err) {
+      return false;
+    }
+  }
+
+  function visibleSurface(element) {
+    if (!element || !element.offsetWidth || !element.offsetHeight) return false;
+    var style = readStyle(element);
+    if (!style) return false;
+    if (style.display === 'none' || style.visibility === 'hidden') return false;
     return true;
   }
 
-  function stopFollow() {
-    following = false;
-    if (frameHandle && typeof root.cancelAnimationFrame === 'function') {
+  /* The approved surfaces that are on screen right now, in document order per
+     selector. `.tabbar` is `display:none` above the mobile breakpoint, so this
+     is what keeps the mobile lens mobile — re-asked on every refit. */
+  function approvedSurfaces() {
+    var doc = documentRef();
+    if (!doc || typeof doc.querySelectorAll !== 'function') return [];
+    var found = [];
+    for (var i = 0; i < SURFACE_SELECTORS.length; i++) {
+      var list;
       try {
-        root.cancelAnimationFrame.call(root, frameHandle);
+        list = doc.querySelectorAll(SURFACE_SELECTORS[i]);
       } catch (err) {
-        // A frame that cannot be cancelled will see `following` false and stop.
+        continue;
+      }
+      for (var j = 0; j < list.length; j++) {
+        var element = list[j];
+        if (visibleSurface(element) && found.indexOf(element) === -1) found.push(element);
       }
     }
-    frameHandle = 0;
+    return found;
   }
 
-  /* ---- lifecycle (P-2 lands the DOM half) -------------------------------- */
+  function ensureStyle() {
+    if (styleEl && styleEl.parentNode) return styleEl;
+    var doc = documentRef();
+    var head = doc && (doc.head || (doc.getElementsByTagName && doc.getElementsByTagName('head')[0]));
+    if (!head || typeof doc.createElement !== 'function') return null;
+    var element = doc.createElement('style');
+    if (!element) return null;
+    element.id = STYLE_ID;
+    element.appendChild(doc.createTextNode(STYLE_TEXT));
+    head.insertBefore(element, head.firstChild);
+    styleEl = element;
+    return element;
+  }
 
-  /** Bootstrap (lands in P-2): engine setup, gating and auto-init on
-      DOMContentLoaded. No-op stub until then — registers nothing. */
-  function init() {}
+  /* One hidden `<svg id="lg-defs">` on body, the only node this engine adds
+     outside the surfaces and the style. Its filters are the only children. */
+  function ensureDefs() {
+    if (defsContainer && defsEl && defsEl.parentNode) return defsContainer;
+    var doc = documentRef();
+    if (!doc || !doc.body) return null;
+    var svg = svgElement('svg', { id: DEFS_ID, width: 0, height: 0, 'aria-hidden': 'true' });
+    var defs = svgElement('defs', {});
+    if (!svg || !defs) return null;
+    svg.setAttribute('style', 'position:absolute;pointer-events:none');
+    attach(svg, defs);
+    attach(doc.body, svg);
+    defsEl = svg;
+    defsContainer = defs;
+    return defsContainer;
+  }
 
-  /** Mount a lens on an approved surface (lands in P-2): creates the
-      generated backdrop, inserts the filter built here, and starts follow(). */
-  function mount() {}
+  function releaseChrome() {
+    if (styleEl && styleEl.parentNode) styleEl.parentNode.removeChild(styleEl);
+    styleEl = null;
+    if (defsEl && defsEl.parentNode) defsEl.parentNode.removeChild(defsEl);
+    defsEl = null;
+    defsContainer = null;
+  }
 
-  /** Tear down one mounted lens and its generated nodes (lands in P-2). */
-  function unmount() {}
+  /* ---- the rim ----------------------------------------------------------- */
 
-  /** Repaint the rim and refit geometry after theme or layout changes
-      (lands in P-2). */
-  function refresh() {}
+  /* The rim light P-1 already knows how to draw, painted as the surface's own
+     background image — inline, and only inline. styles.css declares
+     `background:var(--glass)` on the surface, and a shorthand declared later
+     resets background-image, so an injected rule prepended to <head> loses the
+     cascade (the rim would never paint) and one appended to <head> wins over
+     the app's own background (the frost would go). Inline longhands beat both,
+     and removeProperty() on teardown hands the surface back untouched.
+     `--lg-rim` carries the same image as the published token upstream sets. */
+  function applyRim(record, dark) {
+    var element = record.el;
+    var rim = buildRim(element, dark);
+    if (!rim) return false;
+    var key = rim.key + '|' + (dark ? 'dark' : 'light');
+    if (record.rimKey === key) return true;
+    element.style.setProperty('--lg-rim', rim.url);
+    element.style.setProperty('background-image', rim.url);
+    element.style.setProperty('background-size', '100% 100%');
+    element.style.setProperty('background-position', '0 0');
+    element.style.setProperty('background-repeat', 'no-repeat');
+    if (element.setAttribute && element.hasAttribute && !element.hasAttribute('data-rim')) {
+      element.setAttribute('data-rim', '');
+    }
+    record.rimKey = key;
+    _diagnostics.repaints += 1;
+    return true;
+  }
 
-  /** Full teardown. P-1 owns the loop; P-2 adds the generated layer. */
+  /* ---- the bend ---------------------------------------------------------- */
+
+  function releaseEntry(entry) {
+    if (!entry) return;
+    entry.refs = Math.max(0, entry.refs - 1);
+    if (entry.refs > 0) return;
+    if (entry.element && entry.element.parentNode) entry.element.parentNode.removeChild(entry.element);
+    backdrops.forEach(function (value, key) {
+      if (value === entry) backdrops.delete(key);
+    });
+  }
+
+  function rememberBackdrop(key, entry) {
+    backdrops.set(key, entry);
+    while (backdrops.size > BACKDROP_CACHE_LIMIT) {
+      var oldest = backdrops.keys().next();
+      if (oldest.done) break;
+      var value = backdrops.get(oldest.value);
+      if (value && value.refs > 0) break;
+      backdrops.delete(oldest.value);
+      if (value && value.element && value.element.parentNode) {
+        value.element.parentNode.removeChild(value.element);
+      }
+    }
+  }
+
+  function dropBackdrop(record) {
+    var entry = record.backdrop;
+    record.backdrop = null;
+    record.backdropKey = '';
+    releaseEntry(entry);
+  }
+
+  /* Bends the surface's own backdrop: a single-lens filter in px over the
+     surface's box (x:0 y:0 across/down, `box` false — upstream
+     fitBackdropLens :857-878 and its `place(..., false)`), published as
+     `--lg-filter`. Built once per geometry+config key and shared by any
+     surface fitting the same key; a refit that finds the same key keeps the
+     same id (no churn), a refit with a new key mints the next id. */
+  function applyBackdrop(record) {
+    var element = record.el;
+    if (!element || !backdropCapable()) return false;
+    var settings = config(element);
+    var shape = track(element);
+    if (!shape) {
+      _diagnostics.skipped += 1;
+      return false;
+    }
+    var density = Math.min(root.devicePixelRatio || 1, 2);
+    var key = [shape.width, shape.height, shape.radius, density, configKey(settings)].join('|');
+    if (record.backdropKey === key && record.backdrop) return true;
+
+    var entry = backdrops.get(key);
+    if (!entry) {
+      backdropSerial += 1;
+      var built = buildSvgFilter('bslens-backdrop-' + backdropSerial, {
+        shape: shape,
+        density: density,
+        config: settings,
+        region: { x: 0, y: 0, width: shape.width, height: shape.height },
+        mapBox: { x: 0, y: 0, width: shape.width, height: shape.height }
+      });
+      if (!built) return false;
+      var container = ensureDefs();
+      if (!container) return false;
+      attach(container, built.element);
+      entry = {
+        id: built.id,
+        url: built.url,
+        element: built.element,
+        key: key,
+        reach: built.scale,
+        dispersion: settings.dispersion,
+        refs: 0
+      };
+      rememberBackdrop(key, entry);
+      _diagnostics.backdrops += 1;
+    }
+
+    var previous = record.backdrop;
+    element.style.setProperty('--lg-filter', entry.url);
+    record.backdrop = entry;
+    record.backdropKey = key;
+    entry.refs += 1;
+    if (previous && previous !== entry) releaseEntry(previous);
+    return true;
+  }
+
+  /* ---- attach, refit, detach --------------------------------------------- */
+
+  function observeSurface(record) {
+    var element = record.el;
+    if (typeof root.ResizeObserver === 'function' && !record.resize) {
+      try {
+        record.resize = new root.ResizeObserver(schedule);
+        record.resize.observe(element);
+      } catch (err) {
+        record.resize = null;
+        _diagnostics.errors += 1;
+      }
+    }
+    if (typeof root.MutationObserver === 'function' && !record.observer) {
+      try {
+        // Read-only: app.js:162 toggles `.scrolled` on the topbar as it scrolls.
+        record.observer = new root.MutationObserver(schedule);
+        record.observer.observe(element, { attributes: true, attributeFilter: ['class'] });
+      } catch (err) {
+        record.observer = null;
+        _diagnostics.errors += 1;
+      }
+    }
+  }
+
+  function attachRecord(element) {
+    var record = { el: element, backdrop: null, backdropKey: '', rimKey: '', resize: null, observer: null };
+    if (!applyRim(record, darkNow())) return null;
+    applyBackdrop(record);
+    observeSurface(record);
+    records.push(record);
+    _diagnostics.mounts += 1;
+    return record;
+  }
+
+  function teardownRecord(record) {
+    var element = record.el;
+    if (element && element.style && typeof element.style.removeProperty === 'function') {
+      element.style.removeProperty('--lg-filter');
+      element.style.removeProperty('--lg-rim');
+      element.style.removeProperty('background-image');
+      element.style.removeProperty('background-size');
+      element.style.removeProperty('background-position');
+      element.style.removeProperty('background-repeat');
+    }
+    if (element && element.removeAttribute) element.removeAttribute('data-rim');
+    dropBackdrop(record);
+    if (record.resize) {
+      record.resize.disconnect();
+      record.resize = null;
+    }
+    if (record.observer) {
+      record.observer.disconnect();
+      record.observer = null;
+    }
+  }
+
+  /* Reconciles the attached set with what is on screen: a surface that went
+     away (the tabbar above the breakpoint) is handed back, a surface that
+     appeared is picked up, and the rest are refitted. */
+  function syncSurfaces() {
+    if (!started || gated()) return 0;
+    var surfaces = approvedSurfaces();
+    for (var i = records.length - 1; i >= 0; i--) {
+      if (surfaces.indexOf(records[i].el) === -1) {
+        teardownRecord(records[i]);
+        records.splice(i, 1);
+      }
+    }
+    if (!surfaces.length) {
+      if (styleEl || defsEl) releaseChrome();
+      return 0;
+    }
+    ensureStyle();
+    for (var j = 0; j < surfaces.length; j++) {
+      var element = surfaces[j];
+      var record = null;
+      for (var k = 0; k < records.length; k++) {
+        if (records[k].el === element) {
+          record = records[k];
+          break;
+        }
+      }
+      if (!record) {
+        attachRecord(element);
+        continue;
+      }
+      if (applyRim(record, darkNow())) applyBackdrop(record);
+    }
+    return records.length;
+  }
+
+  function repaintRims() {
+    if (!started) return;
+    var dark = darkNow();
+    for (var i = 0; i < records.length; i++) {
+      if (visibleSurface(records[i].el)) applyRim(records[i], dark);
+    }
+  }
+
+  function unmountAll() {
+    for (var i = 0; i < records.length; i++) teardownRecord(records[i]);
+    records.length = 0;
+    releaseChrome();
+  }
+
+  /* Refit batching: one idle callback (or one short timer where
+     requestIdleCallback is missing) for a burst of resize/orientation/scroll
+     class changes, never one refit per event. */
+  function schedule() {
+    if (!started || idleHandle) return;
+    if (typeof root.requestIdleCallback === 'function') {
+      try {
+        idleHandle = root.requestIdleCallback(runScheduled, { timeout: 120 });
+        idleMode = 'idle';
+        return;
+      } catch (err) {
+        idleHandle = 0;
+      }
+    }
+    if (typeof root.setTimeout !== 'function') return;
+    idleHandle = root.setTimeout(runScheduled, BATCH_FALLBACK_MS);
+    idleMode = 'timeout';
+  }
+
+  function runScheduled() {
+    idleHandle = 0;
+    idleMode = '';
+    if (!started || gated()) return;
+    syncSurfaces();
+  }
+
+  function cancelScheduled() {
+    if (!idleHandle) return;
+    try {
+      if (idleMode === 'idle' && typeof root.cancelIdleCallback === 'function') {
+        root.cancelIdleCallback(idleHandle);
+      } else if (typeof root.clearTimeout === 'function') {
+        root.clearTimeout(idleHandle);
+      }
+    } catch (err) {
+      // A callback that still fires finds `started` false or nothing attached.
+    }
+    idleHandle = 0;
+    idleMode = '';
+  }
+
+  function applyGate() {
+    if (!started) return;
+    if (gated()) {
+      unmountAll();
+      return;
+    }
+    syncSurfaces();
+  }
+
+  function onVisibility() {
+    if (pageHidden()) {
+      stopFollow();
+      return;
+    }
+    if (started && !gated()) follow();
+  }
+
+  /* Theme reactivity is the engine's own: the app's data-theme attribute and
+     the colour-scheme query, nothing from app.js/theme-boot.js. */
+  function observeTheme() {
+    var doc = documentRef();
+    var element = doc && doc.documentElement;
+    if (element && typeof root.MutationObserver === 'function' && !themeObserver) {
+      try {
+        themeObserver = new root.MutationObserver(repaintRims);
+        themeObserver.observe(element, { attributes: true, attributeFilter: ['data-theme'] });
+      } catch (err) {
+        themeObserver = null;
+        _diagnostics.errors += 1;
+      }
+    }
+    watch('(prefers-color-scheme: dark)', repaintRims);
+  }
+
+  function bindEvents() {
+    if (eventsBound) return;
+    eventsBound = true;
+    bind(root, 'resize', schedule);
+    bind(root, 'orientationchange', schedule);
+    bind(root, 'hashchange', schedule);
+    var doc = documentRef();
+    if (doc) bind(doc, 'visibilitychange', onVisibility);
+    observeTheme();
+  }
+
+  function releaseEvents() {
+    for (var i = 0; i < boundEvents.length; i++) {
+      var entry = boundEvents[i];
+      try {
+        entry.target.removeEventListener(entry.type, entry.handler, false);
+      } catch (err) {
+        // Nothing left to detach.
+      }
+    }
+    boundEvents.length = 0;
+    for (var j = 0; j < mediaWatches.length; j++) {
+      var watchEntry = mediaWatches[j];
+      try {
+        if (typeof watchEntry.media.removeEventListener === 'function') {
+          watchEntry.media.removeEventListener('change', watchEntry.handler);
+        } else if (typeof watchEntry.media.removeListener === 'function') {
+          watchEntry.media.removeListener(watchEntry.handler);
+        }
+      } catch (err) {
+        // Nothing left to detach.
+      }
+    }
+    mediaWatches.length = 0;
+    if (themeObserver) {
+      themeObserver.disconnect();
+      themeObserver = null;
+    }
+    eventsBound = false;
+  }
+
+  /* ---- follow contract (event-driven, see the P-2 note above) ------------ */
+
+  function follow() {
+    return records.length > 0;
+  }
+
+  function stopFollow() {
+    return false;
+  }
+
+  /* ---- lifecycle --------------------------------------------------------- */
+
+  /* Bootstrap: feature gate first. When unsupported this returns before any
+     DOM write and before any listener, so an unsupported engine sees exactly
+     the P-1 world — no style, no svg, no inline property, no observer. */
+  function init() {
+    if (started) return records.length > 0;
+    started = true;
+    if (!isSupported()) {
+      _diagnostics.skipped += 1;
+      return false;
+    }
+    watchGates();
+    bindEvents();
+    if (gated()) return false;
+    return syncSurfaces() > 0;
+  }
+
+  /** Attach the lens to every approved surface on screen; returns the count. */
+  function mount() {
+    if (!started) return init();
+    if (gated()) return 0;
+    return syncSurfaces();
+  }
+
+  /** Hand one surface back (or all of them when called with no argument). */
+  function unmount(target) {
+    if (!target) {
+      unmountAll();
+      return 0;
+    }
+    for (var i = records.length - 1; i >= 0; i--) {
+      if (records[i].el === target) {
+        teardownRecord(records[i]);
+        records.splice(i, 1);
+      }
+    }
+    return records.length;
+  }
+
+  /** Refit geometry, the rim and the bend now (batched callers use schedule). */
+  function refresh() {
+    return syncSurfaces();
+  }
+
+  /** Full teardown: every node, property, timer, observer and listener. */
   function destroy() {
-    stopFollow();
-    mountedLenses.length = 0;
+    cancelScheduled();
+    unmountAll();
+    releaseEvents();
+    backdrops.clear();
+    started = false;
+    return true;
   }
 
   root.BSLens = {
@@ -806,7 +1349,37 @@
       mountLens: mountLens,
       nextFilterId: nextFilterId,
       follow: follow,
-      stopFollow: stopFollow
+      stopFollow: stopFollow,
+      isWebKit: isWebKit,
+      backdropCapable: backdropCapable,
+      visibleSurface: visibleSurface
     }
   };
+
+  /* Auto-init: the script is the last one in the document, but it still runs
+     while the tree is parsing, so the paint is complete by DOMContentLoaded.
+     A sandbox with no document stays inert. */
+  function boot() {
+    var doc = documentRef();
+    if (!doc || !doc.documentElement) return;
+    function run() {
+      try {
+        init();
+      } catch (err) {
+        _diagnostics.errors += 1;
+        try {
+          destroy();
+        } catch (inner) {
+          // Nothing left to undo.
+        }
+      }
+    }
+    if (doc.readyState === 'loading' && typeof doc.addEventListener === 'function') {
+      doc.addEventListener('DOMContentLoaded', run, false);
+      return;
+    }
+    run();
+  }
+
+  boot();
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -8,7 +8,7 @@ body{background:transparent}
 a{color:var(--accent)}
 :focus{outline:none}
 :focus-visible{outline:3px solid var(--ui-focus);outline-offset:2px}
-.topbar{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:.6rem;padding:.55rem 1rem;background:var(--glass);border-bottom:1px solid var(--glass-border);box-shadow:var(--glass-shadow);-webkit-backdrop-filter:blur(18px) saturate(160%);backdrop-filter:blur(18px) saturate(160%)}
+.topbar{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:.6rem;padding:.55rem 1rem;background:var(--glass);border-bottom:1px solid var(--glass-border);box-shadow:var(--glass-shadow);-webkit-backdrop-filter:blur(18px) saturate(160%);backdrop-filter:blur(18px) saturate(160%) var(--lg-filter,)}
 .brand{color:var(--text);text-decoration:none;font-size:1.05rem}
 .page-title{display:none;margin:0;min-width:0;font-size:1.2rem;font-weight:700;letter-spacing:-.01em}
 .topright{margin-left:auto;display:flex;gap:.4rem;align-items:center}
