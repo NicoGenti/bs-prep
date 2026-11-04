@@ -31,7 +31,7 @@ jobs:
       - name: Prepara i file del sito
         run: |
           mkdir -p _site
-          cp index.html styles.css theme-boot.js app.js views-core.js views-sections.js generators.js \
+          cp index.html styles.css mobile-glass.css theme-boot.js app.js views-core.js views-sections.js generators.js \
             sync-config.js sync-merge.js sync.js html-sanitize.js \
             data-lessons.js data-quiz.js data-english.js content-meta.js \
             manifest.webmanifest icon.svg apple-touch-icon.png icon-192.png icon-512.png \
