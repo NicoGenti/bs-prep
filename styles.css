@@ -103,7 +103,6 @@ details.m-fold>summary::marker{content:none}
  details.m-fold.dash-secondary>summary{display:none}
  .dash-hero{display:none}
  #navBackdrop,#thumbDock{display:none !important}
- .sidenav,#menuBtn{display:none !important}
 }
 @media (max-width:767px), (max-width:950px) and (max-height:500px){
  html,body{overflow-x:hidden;max-width:100%}
