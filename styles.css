@@ -1,5 +1,5 @@
-:root{--bg:#f6f7fb;--card:#fff;--text:#1b1f2a;--muted:#3e4a63;--border:#e3e6ee;--accent:#4f46e5;--accent2:#7c3aed;--ok:#16a34a;--bad:#dc2626;--warn:#d97706;--soft:#eef0ff;--code:#f1f3f9;--shadow:0 1px 3px rgba(16,24,40,.08),0 1px 2px rgba(16,24,40,.04);--glass:rgba(255,255,255,.68);--glass-border:rgba(255,255,255,.78);--glass-shadow:0 0 0 1px rgba(16,24,40,.06),0 10px 30px rgba(16,24,40,.08);--page:linear-gradient(165deg,#e4e9fb 0%,#f6f4ff 42%,#e5f4ef 100%);--space-1:.25rem;--space-2:.5rem;--space-3:.8rem;--space-4:1rem;--space-5:1.4rem;--radius-sm:9px;--radius-md:14px;--radius-lg:18px;--text-sm:.85rem;--text-md:1rem;--text-lg:1.25rem;--text-xl:1.6rem;--hit:48px;--tabbar-h:0px;--thumb-h:0px;--focus:0 0 0 3px color-mix(in srgb,var(--accent) 55%,transparent)}
-[data-theme=dark]{--bg:#0f1220;--card:#181c2e;--text:#e7e9f3;--muted:#c9d0e3;--border:#2a3048;--accent:#8b85ff;--accent2:#b18cff;--ok:#34d399;--bad:#f87171;--warn:#fbbf24;--soft:#22264a;--code:#11152a;--shadow:none;--glass:rgba(22,26,44,.62);--glass-border:rgba(255,255,255,.16);--glass-shadow:0 0 0 1px rgba(255,255,255,.05),0 10px 28px rgba(0,0,0,.35);--page:linear-gradient(165deg,#101428 0%,#1a1430 48%,#0e1a20 100%)}
+/* Bridge alias block (layer 2): app vocabulary → --ui-*; sole alias definitions (DR-14). Kept literal (residuals): --glass (translucent composition), --page (gradient composition), --hit (DR-17), --tabbar-h/--thumb-h (TB-5 runtime). */:root{--bg:var(--ui-bg);--card:var(--ui-surface);--text:var(--ui-ink);--muted:var(--ui-ink-muted);--border:var(--ui-line-strong);--accent:var(--ui-accent-text);--accent2:var(--ui-accent);--ok:var(--ui-success);--bad:var(--ui-danger);--warn:var(--ui-warning);--soft:var(--ui-accent-soft);--code:var(--ui-surface-2);--glass:rgba(255,255,255,.68);--glass-border:var(--ui-line);--glass-shadow:var(--ui-shadow-2);--page:linear-gradient(165deg,#e4e9fb 0%,#f6f4ff 42%,#e5f4ef 100%);--space-1:var(--ui-space-1);--space-2:var(--ui-space-2);--space-3:var(--ui-space-3);--space-4:var(--ui-space-4);--space-5:var(--ui-space-5);--radius-sm:var(--ui-radius-sm);--radius-lg:var(--ui-radius-lg);--text-sm:var(--ui-text-sm);--text-md:var(--ui-text-lg);--text-lg:var(--ui-text-xl);--hit:48px;--tabbar-h:0px;--thumb-h:0px}
+:root[data-theme="dark"]{--glass:rgba(22,26,44,.62);--page:linear-gradient(165deg,#101428 0%,#1a1430 48%,#0e1a20 100%)}
 *{box-sizing:border-box}
 html{font-size:100%}
 html,body{margin:0;color:var(--text);font:1rem/1.55 -apple-system,BlinkMacSystemFont,system-ui,"Segoe UI",Roboto,Ubuntu,sans-serif}
@@ -7,7 +7,7 @@ html{background:var(--page);background-attachment:fixed;min-height:100%}
 body{background:transparent}
 a{color:var(--accent)}
 :focus{outline:none}
-:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+:focus-visible{outline:3px solid var(--ui-focus);outline-offset:2px}
 .topbar{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:.6rem;padding:.55rem 1rem;background:var(--glass);border-bottom:1px solid var(--glass-border);box-shadow:var(--glass-shadow);-webkit-backdrop-filter:blur(18px) saturate(160%);backdrop-filter:blur(18px) saturate(160%)}
 .brand{color:var(--text);text-decoration:none;font-size:1.05rem}
 .page-title{display:none;margin:0;min-width:0;font-size:1.2rem;font-weight:700;letter-spacing:-.01em}
