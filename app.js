@@ -101,7 +101,7 @@ function countdown(el,secs,onEnd,onTick){let left=secs;const fmt=s=>Math.floor(s
 const ROUTES={};
 function go(h){location.hash=h}
 function closeNav(){const nav=$('#sidenav');if(nav)nav.classList.remove('open');const bd=$('#navBackdrop');if(bd)bd.hidden=true;document.body.classList.remove('nav-open');const btn=$('#menuBtn');if(btn)btn.setAttribute('aria-expanded','false')}
-function openNav(){$('#sidenav').classList.add('open');const bd=$('#navBackdrop');if(bd)bd.hidden=false;document.body.classList.add('nav-open');$('#menuBtn').setAttribute('aria-expanded','true')}
+function openNav(){const nav=$('#sidenav');if(nav)nav.classList.add('open');const bd=$('#navBackdrop');if(bd)bd.hidden=false;document.body.classList.add('nav-open');const btn=$('#menuBtn');if(btn)btn.setAttribute('aria-expanded','true')}
 const TAB_FOR={home:'home',review:'review',en:'en',lesson:'course',course:'course',cv:'more',ps:'more',tech:'more',behav:'more',refs:'more',settings:'more'};
 const TITLES={home:'BS Prep',review:'Ripasso',course:'Studia',lesson:'Lezione',en:'Inglese',cv:'CV e lettera',ps:'Problem solving',tech:'Test tecnici',behav:'Comportamentale',refs:'Referenze',settings:'Impostazioni'};
 const wideQ=window.matchMedia('(min-width: 768px) and (min-height: 501px)');
@@ -138,10 +138,10 @@ document.addEventListener('change',e=>{const el=e.target;if(el.dataset.check){S.
 function checklist(name){return `<div class="card" data-prog="${name}"><div class="cprog">${bar(checkFrac(name))}<div class="small muted">${pct(checkFrac(name))}% completato</div></div>${CHECKLISTS[name].map((t,i)=>`<label class="check"><input type="checkbox" data-check="${name}:${i}" ${S.checks[name+':'+i]?'checked':''}><span>${esc(t)}</span></label>`).join('')}</div>`}
 const tval=k=>esc(S.texts[k]||'');
 
-$('#menuBtn').addEventListener('click',()=>{$('#sidenav').classList.contains('open')?closeNav():openNav()});
+const menuBtn=$('#menuBtn');if(menuBtn)menuBtn.addEventListener('click',()=>{$('#sidenav').classList.contains('open')?closeNav():openNav()});
 const navBd=$('#navBackdrop');if(navBd)navBd.addEventListener('click',closeNav);
 document.addEventListener('keydown',e=>{if(e.key!=='Escape')return;if(document.body.classList.contains('sheet-open')){closeSheet();const b=$('#moreBtn');if(b)b.focus();return}closeNav()});
-$('#sidenav').addEventListener('click',e=>{if(e.target.closest('a'))closeNav()});
+const sidenavEl=$('#sidenav');if(sidenavEl)sidenavEl.addEventListener('click',e=>{if(e.target.closest('a'))closeNav()});
 const moreBtn=$('#moreBtn');if(moreBtn)moreBtn.addEventListener('click',()=>{document.body.classList.contains('sheet-open')?closeSheet():openSheet()});
 const sheetBd=$('#sheetBackdrop');if(sheetBd)sheetBd.addEventListener('click',closeSheet);
 const moreSheet=$('#moreSheet');
