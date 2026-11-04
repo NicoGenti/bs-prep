@@ -1,4 +1,5 @@
 /* brand.css — bs-prep. Generato da web-brand/make-brand.py (accento #4f46e5). Strato 2 di 3. */
+/* Palette scura = "Luna Glaciale" (2026-11-04, scelta utente) — neutri/accenti scuri Petalo sovrascritti. */
 :root {
   --ui-accent: #6058e8;
   --ui-accent-ink: #ffffff;
@@ -7,9 +8,36 @@
   --ui-focus: #4f46e5;
 }
 :root[data-theme="dark"] {
-  --ui-accent: #827ced;
-  --ui-accent-ink: #08062d;
-  --ui-accent-soft: #31324a;
-  --ui-accent-text: #9792f0;
-  --ui-focus: #827ced;
+  --ui-bg: #121620;
+  --ui-surface: #1a1f2a;
+  --ui-surface-2: #222836;
+  --ui-ink: #eef1f7;
+  --ui-ink-muted: #9aa3b5;
+  --ui-ink-faint: #6e7687;
+  --ui-line: #ffffff12;
+  --ui-line-strong: #ffffff22;
+
+  --ui-accent-text: #a8a2fb;
+  --ui-accent: #7b73f0;
+  --ui-accent-soft: #2a2d46;
+  --ui-accent-ink: #0a0826;
+  --ui-focus: #8b84f2;
+
+  --ui-nav-bg: #11161f;
+  --ui-nav-bg-2: #191f2b;
+  --ui-nav-ink: #eef1f7;
+  --ui-nav-muted: #9aa3b5;
+  --ui-nav-line: #ffffff12;
+
+  --ui-success: #6dd6a8;
+  --ui-warning: #f0c86e;
+  --ui-danger: #ff958a;
+  --ui-danger-solid: #c2382c;
+  --ui-on-danger-solid: #ffffff;
+  --ui-success-fill: #46b47e;
+  --ui-warning-fill: #d9a43a;
+  --ui-danger-fill: #e5675a;
+  --ui-info: #93c3f3;
+  --ui-info-fill: #5f9bd6;
+  --ui-well: #ffffff0f;
 }
