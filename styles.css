@@ -23,7 +23,7 @@ a{color:var(--accent)}
 .sidenav a:hover{background:var(--soft)}
 .sidenav a.active{background:var(--accent);color:var(--ui-accent-ink)}
 .navsep{font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:1rem .7rem .3rem}
-main{flex:1;min-width:0;padding:1.4rem clamp(.8rem,3vw,2.4rem) calc(var(--tabbar-h,0px) + 1rem);max-width:1100px}
+main{flex:1;min-width:0;padding:1.4rem clamp(.8rem,3vw,2.4rem) 4rem;max-width:1100px}
 h1{font-size:1.6rem;margin:.2rem 0 .8rem}h2{font-size:1.25rem;margin:1.4rem 0 .6rem}h3{font-size:1.05rem;margin:1rem 0 .4rem}
 .muted{color:var(--muted)}.small{font-size:.85rem}
 .card{background:var(--glass);border:1px solid var(--glass-border);border-radius:var(--radius-lg);padding:var(--space-4) 1.1rem;margin:var(--space-3) 0;box-shadow:var(--glass-shadow);-webkit-backdrop-filter:blur(18px) saturate(160%);backdrop-filter:blur(18px) saturate(160%)}
@@ -77,7 +77,7 @@ svg.cell{width:100%;height:auto;background:var(--bg);border:1px solid var(--bord
 .mopts{display:grid;grid-template-columns:repeat(auto-fill,minmax(80px,110px));gap:8px}
 .mopts button{padding:4px;background:none;border:2px solid var(--border);border-radius:10px;cursor:pointer}
 .mopts button.ok{border-color:var(--ok)}.mopts button.bad{border-color:var(--bad)}
-.toast{position:fixed;bottom:calc(var(--tabbar-h,0px) + 1.2rem);left:50%;transform:translateX(-50%);background:var(--text);color:var(--bg);padding:.5rem 1rem;border-radius:10px;opacity:0;pointer-events:none;transition:opacity var(--ui-dur-base) var(--ui-ease-out);z-index:50}
+.toast{position:fixed;bottom:1.2rem;left:50%;transform:translateX(-50%);background:var(--text);color:var(--bg);padding:.5rem 1rem;border-radius:10px;opacity:0;pointer-events:none;transition:opacity var(--ui-dur-base) var(--ui-ease-out);z-index:50}
 .toast.show{opacity:1}
 details{margin:.5rem 0}summary{cursor:pointer;font-weight:600}
 details.m-fold{margin:0;background:transparent;border:0;box-shadow:none}
@@ -102,7 +102,7 @@ details.m-fold>summary::marker{content:none}
  details.m-fold>summary{pointer-events:none;cursor:default}
  details.m-fold.dash-secondary>summary{display:none}
  .dash-hero{display:none}
- #navBackdrop,#thumbDock{display:none !important}
+ #navBackdrop,.tabbar,#moreSheet,#sheetBackdrop,#thumbDock{display:none !important}
 }
 @media (max-width:767px), (max-width:950px) and (max-height:500px){
  html,body{overflow-x:hidden;max-width:100%}
