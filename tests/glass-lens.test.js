@@ -31,6 +31,7 @@ const WEBKIT_UA =
   'Version/17.0 Safari/605.1.15';
 
 const PNG_URL = 'data:image/png;base64,AAAA';
+let pngSerial = 0;
 
 function makeInlineStyle() {
   const props = new Map();
@@ -129,7 +130,11 @@ function makeCanvas() {
       return context;
     },
     toDataURL() {
-      return PNG_URL;
+      // A distinct encode per call, like a real canvas: two different maps
+      // must not collide on the same data URL, or a repainted rim would be
+      // indistinguishable from the previous one.
+      pngSerial += 1;
+      return `${PNG_URL}${pngSerial}`;
     }
   };
 }
@@ -231,7 +236,6 @@ function makeDocument(surfaces, readyState) {
  *   noMatchMedia  – omit matchMedia entirely
  *   media         – initial reduced/colour-scheme state
  *   tabbar        – { width, height, display } for the .tabbar stub
- *   noTopbar/noTabbar – omit a surface from querySelectorAll
  */
 function createHarness(options) {
   const opts = options || {};
@@ -304,8 +308,8 @@ function createHarness(options) {
       Object.assign({ width: 320, height: 56, display: 'none' }, opts.tabbar || {})
     );
     const surfaces = {
-      '.topbar': opts.noTopbar ? [] : [topbar],
-      '.tabbar': opts.noTabbar ? [] : [tabbar]
+      '.topbar': [topbar],
+      '.tabbar': [tabbar]
     };
     document = makeDocument(surfaces, opts.readyState || 'complete');
     sandbox.document = document;
@@ -326,7 +330,7 @@ function createHarness(options) {
   };
 }
 
-function inline(harn, element, name) {
+function inline(element, name) {
   return element.style.getPropertyValue(name);
 }
 
@@ -401,15 +405,41 @@ test('unsupported init() performs zero DOM side effects', () => {
   assert.equal(harn.document.head.children.filter(el => el.id === 'bslens-styles').length, 0);
 });
 
+test('mount() and refresh() after an unsupported init() mutate nothing', () => {
+  const harn = createHarness({ css: false });
+  assert.equal(harn.BSLens.isSupported(), false);
+  assert.equal(harn.BSLens.init(), false);
+  const skipped = harn.BSLens._diagnostics.skipped;
+
+  // The latch: support cannot appear mid-page, so a now-passing probe does
+  // not talk the already-decided engine into mounting.
+  harn.sandbox.CSS.supports = () => true;
+  assert.equal(harn.BSLens.init(), false);
+
+  // The finding-2 path: the public API must stay inert after that init.
+  assert.equal(harn.BSLens.mount(), 0);
+  assert.equal(harn.BSLens.refresh(), 0);
+  assert.equal(harn.BSLens._diagnostics.skipped, skipped + 2);
+
+  assert.equal(harn.topbar.style._props.size, 0);
+  assert.equal(harn.tabbar.style._props.size, 0);
+  assert.equal(harn.topbar.hasAttribute('data-rim'), false);
+  assert.equal(harn.document.head.children.length, 0);
+  assert.equal(harn.document.body.children.length, 0);
+  assert.equal(harn.BSLens._diagnostics.mounts, 0);
+  assert.equal(harn.BSLens._diagnostics.backdrops, 0);
+  assert.equal(harn.BSLens._diagnostics.rims, 0);
+});
+
 test('supported init mounts the topbar lens and prepends one style + one defs', () => {
   const harn = createHarness();
   assert.equal(harn.BSLens.init(), true);
 
-  const filter = inline(harn, harn.topbar, '--lg-filter');
+  const filter = inline(harn.topbar, '--lg-filter');
   assert.match(filter, /^url\("#bslens-backdrop-\d+"\)$/);
-  assert.match(inline(harn, harn.topbar, 'background-image'), /^url\("data:image\/png/);
+  assert.match(inline(harn.topbar, 'background-image'), /^url\("data:image\/png/);
   assert.equal(harn.topbar.hasAttribute('data-rim'), true);
-  assert.equal(inline(harn, harn.topbar, 'background-size'), '100% 100%');
+  assert.equal(inline(harn.topbar, 'background-size'), '100% 100%');
 
   const styles = harn.document.head.children.filter(el => el.id === 'bslens-styles');
   assert.equal(styles.length, 1);
@@ -424,13 +454,76 @@ test('supported init mounts the topbar lens and prepends one style + one defs', 
   assert.equal(harn.tabbar.hasAttribute('data-rim'), false);
 });
 
+test('a visible tabbar mounts a second lens: two surfaces, two filters, two rims', () => {
+  const harn = createHarness({ tabbar: { width: 390, height: 56, display: 'flex' } });
+  assert.equal(harn.BSLens.init(), true);
+
+  const filterUrl = /^url\("#bslens-backdrop-\d+"\)$/;
+  const topbarFilter = inline(harn.topbar, '--lg-filter');
+  const tabbarFilter = inline(harn.tabbar, '--lg-filter');
+  assert.match(topbarFilter, filterUrl);
+  assert.match(tabbarFilter, filterUrl);
+  // Different geometry means a different map, so the two lenses are distinct.
+  assert.notEqual(tabbarFilter, topbarFilter);
+
+  for (const surface of [harn.topbar, harn.tabbar]) {
+    assert.match(inline(surface, 'background-image'), /^url\("data:image\/png/);
+    assert.equal(inline(surface, 'background-size'), '100% 100%');
+    assert.equal(surface.hasAttribute('data-rim'), true);
+  }
+
+  const defs = harn.document.body.children.filter(el => el.id === 'lg-defs');
+  assert.equal(defs.length, 1);
+  assert.equal(defs[0].children.length, 1, 'one <defs>');
+  assert.equal(defs[0].children[0].children.length, 2, 'one filter per lens');
+
+  assert.equal(harn.BSLens._diagnostics.mounts, 2);
+  assert.equal(harn.BSLens._diagnostics.backdrops, 2);
+  assert.equal(harn.BSLens._diagnostics.rims, 2);
+});
+
+test('a theme flip repaints the rim once per change, via data-theme and the colour-scheme query', () => {
+  const harn = createHarness();
+  assert.equal(harn.BSLens.init(), true);
+
+  const html = harn.document.documentElement;
+  const themeObserver = harn.record.observers.find(
+    observer => observer.targets.indexOf(html) !== -1
+  );
+  assert.ok(themeObserver, 'a data-theme observer is registered on <html>');
+
+  const before = harn.BSLens._diagnostics.repaints;
+  const lightRim = inline(harn.topbar, 'background-image');
+  assert.match(lightRim, /^url\("data:image\/png/);
+
+  html.setAttribute('data-theme', 'dark');
+  themeObserver.callback();
+  assert.equal(harn.BSLens._diagnostics.repaints, before + 1);
+  const darkRim = inline(harn.topbar, 'background-image');
+  assert.notEqual(darkRim, lightRim, 'a dark rim repaints the background image');
+
+  // A second tick with no theme change is a no-op, not a second repaint.
+  themeObserver.callback();
+  assert.equal(harn.BSLens._diagnostics.repaints, before + 1);
+  assert.equal(inline(harn.topbar, 'background-image'), darkRim);
+
+  // The colour-scheme query is the other driver: with no data-theme the
+  // system preference decides, and the cached light rim comes back verbatim.
+  html.removeAttribute('data-theme');
+  harn.media.set('(prefers-color-scheme: dark)', false);
+  harn.media.fire('(prefers-color-scheme: dark)');
+  assert.equal(harn.BSLens._diagnostics.repaints, before + 2);
+  assert.equal(inline(harn.topbar, 'background-image'), lightRim);
+  assert.equal(harn.BSLens._diagnostics.frames, 0);
+});
+
 test('WebKit capability exclusion: rim paints, --lg-filter never does', () => {
   const harn = createHarness({ userAgent: WEBKIT_UA });
   assert.equal(harn.BSLens.init(), true);
 
-  assert.equal(inline(harn, harn.topbar, '--lg-filter'), '');
+  assert.equal(inline(harn.topbar, '--lg-filter'), '');
   assert.equal(harn.topbar.style.has('--lg-filter'), false);
-  assert.match(inline(harn, harn.topbar, 'background-image'), /^url\("data:image\/png/);
+  assert.match(inline(harn.topbar, 'background-image'), /^url\("data:image\/png/);
   assert.equal(harn.topbar.hasAttribute('data-rim'), true);
 });
 
@@ -482,19 +575,66 @@ test('destroy() removes every node, property and observer, and is idempotent', (
   assert.equal(harn.BSLens.destroy(), true);
 });
 
+test('destroy() is complete: a fresh init() remounts, a late DOMContentLoaded never does', () => {
+  // 1. Teardown clears the caches and the latched probe, so the next init is
+  // a clean remount: new nodes, no duplicate filters, no stale rim.
+  const harn = createHarness();
+  assert.equal(harn.BSLens.init(), true);
+  const firstFilter = inline(harn.topbar, '--lg-filter');
+  const firstRim = inline(harn.topbar, 'background-image');
+
+  assert.equal(harn.BSLens.destroy(), true);
+  assert.equal(harn.BSLens.init(), true);
+
+  const secondFilter = inline(harn.topbar, '--lg-filter');
+  assert.match(secondFilter, /^url\("#bslens-backdrop-\d+"\)$/);
+  assert.notEqual(secondFilter, firstFilter, 'a fresh filter, not the removed one');
+  assert.notEqual(inline(harn.topbar, 'background-image'), firstRim, 'a fresh rim');
+  assert.equal(harn.topbar.hasAttribute('data-rim'), true);
+  assert.equal(harn.topbar.style._props.size, 6);
+
+  assert.equal(
+    harn.document.head.children.filter(el => el.id === 'bslens-styles').length,
+    1
+  );
+  const defs = harn.document.body.children.filter(el => el.id === 'lg-defs');
+  assert.equal(defs.length, 1);
+  assert.equal(defs[0].children.length, 1, 'one <defs>');
+  assert.equal(defs[0].children[0].children.length, 1, 'one filter, not two');
+  assert.equal(harn.BSLens._diagnostics.mounts, 2);
+  // The map cache went with the teardown, so the remount repaints its map
+  // instead of reusing the data URL the destroyed lens owned.
+  assert.equal(harn.BSLens._diagnostics.maps, 2);
+
+  // 2. A boot still pending when destroy() runs is cancelled: the flag the
+  // runner reads keeps the parser's DOMContentLoaded from re-mounting.
+  const late = createHarness({ readyState: 'loading' });
+  assert.equal(late.document._listeners.filter(entry => entry.type === 'DOMContentLoaded').length, 1);
+
+  assert.equal(late.BSLens.destroy(), true);
+  for (const entry of late.document._listeners) {
+    if (entry.type === 'DOMContentLoaded') entry.handler();
+  }
+
+  assert.equal(late.document.head.children.length, 0);
+  assert.equal(late.document.body.children.length, 0);
+  assert.equal(late.topbar.style._props.size, 0);
+  assert.equal(late.BSLens._diagnostics.mounts, 0);
+});
+
 test('filter ids are stable across a no-op refit, re-minted on geometry change, and no rAF runs', () => {
   const harn = createHarness();
   assert.equal(harn.BSLens.init(), true);
 
-  const first = inline(harn, harn.topbar, '--lg-filter');
+  const first = inline(harn.topbar, '--lg-filter');
   assert.match(first, /bslens-backdrop-1/);
 
   harn.BSLens.refresh();
-  assert.equal(inline(harn, harn.topbar, '--lg-filter'), first);
+  assert.equal(inline(harn.topbar, '--lg-filter'), first);
 
   harn.topbar.offsetWidth = 300;
   harn.BSLens.refresh();
-  const second = inline(harn, harn.topbar, '--lg-filter');
+  const second = inline(harn.topbar, '--lg-filter');
   assert.notEqual(second, first);
   assert.match(second, /bslens-backdrop-2/);
 

@@ -112,10 +112,10 @@
      filter on HTML in bounding-box units and paints none of its output
      outside the element (lens.ts:28-34), so a bend built in px would land at
      the wrong scale and clipped. There the glass keeps its frost and paints
-     its rim, and does not bend; Chromium (and, untested here, Gecko) take the
-     filter. Chromium is excluded from the WebKit branch by its own token, as
-     upstream does, so Blink keeps the bend. Everything else in this engine is
-     a feature check. */
+     its rim, and does not bend. Chromium and Gecko are excluded from this
+     branch by the Chromium token, as upstream does; whether the bend mounts
+     is backdropCapable's separate call. Everything else in this engine is a
+     feature check. */
   function isWebKit() {
     try {
       var browser = root.navigator;
@@ -127,21 +127,29 @@
   }
 
   /* Whether this engine can bend its own backdrop: the platform must accept a
-     filter reference inside `backdrop-filter`, and it must not be WebKit. Any
-     throw, or a missing CSS.supports, reads as "no bend" — the rim still
-     paints, because the rim needs no filter. */
+     filter reference inside `backdrop-filter`, AND it must be a Chromium
+     engine. This is upstream-parity — it mirrors `refractsBackdrop`
+     (refraction.ts:209) — because the url-reference render path is only
+     proven on Blink: WebKit cannot paint the filter's output outside the
+     element (see isWebKit), and Gecko's url-reference rendering cannot be
+     verified in this rig. Both therefore join in the frost + rim only, so the
+     untested render path is never mounted. Any throw, or a missing
+     CSS.supports, reads as "no bend" — the rim still paints, because the rim
+     needs no filter. */
   function backdropCapable() {
     var capable = false;
     try {
       var css = root.CSS;
+      var browser = root.navigator;
+      var agent = browser && browser.userAgent ? String(browser.userAgent) : '';
       capable = !!(css && typeof css.supports === 'function' &&
-        (css.supports('backdrop-filter', 'url(#lg-probe)') ||
-          css.supports('-webkit-backdrop-filter', 'url(#lg-probe)')));
+        css.supports('backdrop-filter', 'url(#lg-probe)') &&
+        /Chrom(?:e|ium)\//.test(agent));
     } catch (err) {
       _diagnostics.errors += 1;
       capable = false;
     }
-    return capable && !isWebKit();
+    return capable;
   }
 
   /* ---- plumbing ---------------------------------------------------------- */
@@ -474,16 +482,24 @@
     return { columns: columns, rows: rows, data: data };
   }
 
-  /* A CSS colour as sRGB bytes and alpha, by the canvas's own parsing. */
+  /* A CSS colour as sRGB bytes and alpha, by the canvas's own parsing. The
+     `#0000` sentinel is written first, and read back, because a rejected
+     assignment leaves `fillStyle` untouched: an unparsable `--lg-edge` thus
+     reads back identical to the sentinel and becomes fully transparent,
+     instead of the opaque black the hex branch would otherwise derive from
+     it. */
   function parseColour(context, colour) {
     var value;
+    var sentinel;
     try {
       context.fillStyle = '#0000';
+      sentinel = String(context.fillStyle);
       context.fillStyle = colour || 'transparent';
       value = String(context.fillStyle);
     } catch (err) {
       return [0, 0, 0, 0];
     }
+    if (!value || value === sentinel) return [0, 0, 0, 0];
     if (value.charAt(0) === '#') {
       var hex = [1, 3, 5].map(function (at) { return parseInt(value.slice(at, at + 2), 16); });
       return [hex[0] || 0, hex[1] || 0, hex[2] || 0, 1];
@@ -773,6 +789,15 @@
 
   var records = [];
   var started = false;
+  /* The support probe's result, latched by the first init() and never
+     re-taken: a browser that cannot bend its backdrop does not gain the
+     ability mid-page, and a second probe after the first paint only adds
+     noise. `null` is "not decided yet"; destroy() puts it back to `null` so a
+     remounted engine starts from a clean probe. */
+  var supportLatch = null;
+  /* Set by destroy() so a DOMContentLoaded that lands after a teardown can
+     never resurrect the engine: the boot runner checks it before init(). */
+  var bootCancelled = false;
   var eventsBound = false;
   var boundEvents = [];
   var mediaWatches = [];
@@ -969,6 +994,8 @@
       var oldest = backdrops.keys().next();
       if (oldest.done) break;
       var value = backdrops.get(oldest.value);
+      // A surface still points at this filter: evicting it would leave a
+      // mounted surface referencing a removed node, so FIFO stops here.
       if (value && value.refs > 0) break;
       backdrops.delete(oldest.value);
       if (value && value.element && value.element.parentNode) {
@@ -1100,7 +1127,7 @@
      away (the tabbar above the breakpoint) is handed back, a surface that
      appeared is picked up, and the rest are refitted. */
   function syncSurfaces() {
-    if (!started || gated()) return 0;
+    if (!started || gated() || supportLatch === false) return 0;
     var surfaces = approvedSurfaces();
     for (var i = records.length - 1; i >= 0; i--) {
       if (surfaces.indexOf(records[i].el) === -1) {
@@ -1273,13 +1300,16 @@
 
   /* ---- lifecycle --------------------------------------------------------- */
 
-  /* Bootstrap: feature gate first. When unsupported this returns before any
-     DOM write and before any listener, so an unsupported engine sees exactly
-     the P-1 world — no style, no svg, no inline property, no observer. */
+  /* Bootstrap: feature gate first, and its answer is latched. When
+     unsupported this returns before any DOM write and before any listener, so
+     an unsupported engine sees exactly the P-1 world — no style, no svg, no
+     inline property, no observer. The latch is what keeps the PUBLIC contract
+     honest: a later mount()/refresh() cannot mount either. */
   function init() {
     if (started) return records.length > 0;
     started = true;
-    if (!isSupported()) {
+    if (supportLatch === null) supportLatch = isSupported();
+    if (!supportLatch) {
       _diagnostics.skipped += 1;
       return false;
     }
@@ -1292,6 +1322,10 @@
   /** Attach the lens to every approved surface on screen; returns the count. */
   function mount() {
     if (!started) return init();
+    if (supportLatch === false) {
+      _diagnostics.skipped += 1;
+      return 0;
+    }
     if (gated()) return 0;
     return syncSurfaces();
   }
@@ -1313,15 +1347,28 @@
 
   /** Refit geometry, the rim and the bend now (batched callers use schedule). */
   function refresh() {
+    if (supportLatch === false) {
+      _diagnostics.skipped += 1;
+      return 0;
+    }
     return syncSurfaces();
   }
 
-  /** Full teardown: every node, property, timer, observer and listener. */
+  /* Full teardown: every node, property, timer, observer, listener and cache.
+     The caches hold PNG data URLs and parsed palettes keyed by geometry; they
+     are worthless once the engine is down and would otherwise pin megabytes
+     for the life of the page. The latched support decision is cleared too, so
+     a later init() probes again instead of inheriting a stale verdict. */
   function destroy() {
+    bootCancelled = true;
     cancelScheduled();
     unmountAll();
     releaseEvents();
     backdrops.clear();
+    mapCache.clear();
+    rimCache.clear();
+    palette = undefined;
+    supportLatch = null;
     started = false;
     return true;
   }
@@ -1358,11 +1405,14 @@
 
   /* Auto-init: the script is the last one in the document, but it still runs
      while the tree is parsing, so the paint is complete by DOMContentLoaded.
-     A sandbox with no document stays inert. */
+     A sandbox with no document stays inert. The runner is guarded by
+     `bootCancelled`: a teardown that happens before the document finishes
+     parsing must not be undone by a DOMContentLoaded that lands afterwards. */
   function boot() {
     var doc = documentRef();
     if (!doc || !doc.documentElement) return;
     function run() {
+      if (bootCancelled) return;
       try {
         init();
       } catch (err) {
